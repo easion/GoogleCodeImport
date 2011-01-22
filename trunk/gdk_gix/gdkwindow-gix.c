@@ -1673,7 +1673,7 @@ gdk_gix_window_reparent (GdkWindow *window,
     impl = GDK_WINDOW_IMPL_GIX (window_private->impl);  
 	
 
-	gi_reparent_indow (
+	gi_reparent_window (
 		   impl->drawable.window_id,
 		   parent_impl->drawable.window_id,
 		   x, y);
@@ -1702,7 +1702,7 @@ gdk_gix_window_reparent (GdkWindow *window,
     case GDK_WINDOW_CHILD:
     case GDK_WINDOW_DIALOG:
     case GDK_WINDOW_TEMP:
-      if (WINDOW_IS_TOPLEVEL (window))
+    //  if (WINDOW_IS_TOPLEVEL (window))
 	{
 		/*
 		impl->toplevel_window_type = GDK_WINDOW_TYPE (window);
@@ -2006,7 +2006,7 @@ gdk_gix_window_set_back_pixmap (GdkWindow *window,
         {
           g_object_ref (pixmap);
           private->bg_pixmap = pixmap;
-		  xpixmap = GDK_PIXMAP_XID (pixmap);
+		  xpixmap = GDK_PIXMAP_GIX_ID (pixmap);
         }
       else
         {

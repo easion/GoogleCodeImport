@@ -511,6 +511,35 @@ gdk_display_supports_composite (GdkDisplay *display)
     return FALSE;
 }
 
+struct _GdkWindowParentPos
+{
+  gint x;
+  gint y;
+  gint win32_x;
+  gint win32_y;
+  GdkRectangle clip_rect;
+};
+
+//typedef struct _GdkWindowQueueItem GdkWindowQueueItem;
+typedef struct _GdkWindowParentPos GdkWindowParentPos;
+
+void
+_gdk_window_init_position (GdkWindow *window)
+{
+  GdkWindowParentPos parent_pos;
+  GdkWindowImplGix *impl;
+  
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  
+  impl =
+    GDK_WINDOW_IMPL_GIX (GDK_WINDOW_OBJECT (window)->impl);
+
+  //fixme dpp
+  
+  //gdk_window_compute_parent_pos (impl, &parent_pos);
+  //gdk_window_compute_position (impl, &parent_pos, &impl->position_info);
+}
+
 
 #define __GDK_DISPLAY_X11_C__
 #include "gdkaliasdef.c"

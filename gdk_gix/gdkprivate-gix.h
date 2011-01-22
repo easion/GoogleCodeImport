@@ -64,6 +64,7 @@
 
 //#define GDK_WINDOW_GIX_ID(win) (GDK_WINDOW_IMPL_GIX (GDK_WINDOW_OBJECT (win)->impl)->drawable.window_id)
 #define GDK_WINDOW_GIX_ID(win)           (GDK_DRAWABLE_IMPL_GIX(((GdkWindowObject *)win)->impl)->window_id)
+#define GDK_PIXMAP_GIX_ID(win)           (GDK_DRAWABLE_IMPL_GIX(((GdkPixmapObject *)win)->impl)->window_id)
 
 typedef struct _GdkDrawableImplGix GdkDrawableImplGix;
 typedef struct _GdkWindowImplGix   GdkWindowImplGix;

@@ -675,68 +675,6 @@ gc_unset_clip_mask (GdkGC *gc)
     }
 }
 
-
-void
-_gdk_windowing_gc_set_clip_region (GdkGC           *gc,
-                                   const GdkRegion *region)
-{
-  GdkGCGix *data;
-
-  g_return_if_fail (gc != NULL);
-
-  data = GDK_GC_GIX (gc);
-
-  if (region == &data->clip_region)
-    return;  
-
-  if (region){
-	  gi_boxrec_t *boxptr;
-	  gi_boxrec_t _box_static[8];
-	  int i;
-	 /*printf("_gdk_windowing_gc_set_clip_region: (%d,%d,%d,%d) %d\n", 
-	  region->extents.x1,
-	  region->extents.y1,
-	  region->extents.x2,
-	  region->extents.y2,
-	  region->numRects
-	  );*/
-
-	  if (region->numRects<8) {
-		  boxptr = &_box_static;
-	  }
-	  else{
-		boxptr = g_malloc(region->numRects * sizeof(gi_boxrec_t));
-	  }
-
-	  if (boxptr) {
-		  for (i = 0; i < region->numRects; i++)  {
-			  boxptr[i].x1 = region->rects[i].x1;
-			  boxptr[i].y1 = region->rects[i].y1;
-			  boxptr[i].x2 = region->rects[i].x2;
-			  boxptr[i].y2 = region->rects[i].y2;
-		  }
-
-		gi_set_gc_clip_rectangles( data->gix_gc,  boxptr, region->numRects);
-		if(boxptr != &_box_static)
-		  g_free(boxptr);
-	  }
-	  
-
-    temp_region_init_copy (&data->clip_region, region);
-  }
-  else{
-	gi_set_gc_clip_rectangles( data->gix_gc,  NULL, 0);
-    temp_region_reset (&data->clip_region);
-  }
-
-  gc->clip_x_origin = 0;
-  gc->clip_y_origin = 0;
-  data->values.clip_x_origin = 0;
-  data->values.clip_y_origin = 0;
-
-  gc_unset_clip_mask (gc);
-}
-
 void
 _gdk_windowing_gc_copy (GdkGC *dst_gc,
              GdkGC *src_gc)
@@ -787,5 +725,163 @@ gdk_gc_get_screen (GdkGC *gc)
   
   return _gdk_screen;
 }
+
+void
+_gdk_region_get_xrectangles (const GdkRegion *region,
+                             gint             x_offset,
+                             gint             y_offset,
+                             gi_boxrec_t     **rects,
+                             gint            *n_rects)
+{
+  gi_boxrec_t *rectangles = g_new (gi_boxrec_t, region->numRects);
+  GdkRegionBox *boxes = region->rects;
+  gint i;
+  
+  for (i = 0; i < region->numRects; i++)
+    {
+	  rectangles[i].x1 = CLAMP (boxes[i].x1 + x_offset, G_MINSHORT, G_MAXSHORT);
+      rectangles[i].y1 = CLAMP (boxes[i].y1 + y_offset, G_MINSHORT, G_MAXSHORT);
+      rectangles[i].x2 = CLAMP (boxes[i].x2 + x_offset, G_MINSHORT, G_MAXSHORT) ;
+      rectangles[i].y2 = CLAMP (boxes[i].y2 + y_offset, G_MINSHORT, G_MAXSHORT) ;
+
+      /*rectangles[i].x = CLAMP (boxes[i].x1 + x_offset, G_MINSHORT, G_MAXSHORT);
+      rectangles[i].y = CLAMP (boxes[i].y1 + y_offset, G_MINSHORT, G_MAXSHORT);
+      rectangles[i].width = CLAMP (boxes[i].x2 + x_offset, G_MINSHORT, G_MAXSHORT) - rectangles[i].x;
+      rectangles[i].height = CLAMP (boxes[i].y2 + y_offset, G_MINSHORT, G_MAXSHORT) - rectangles[i].y;
+	  */
+    }
+
+  *rects = rectangles;
+  *n_rects = region->numRects;
+}
+
+
+
+gi_gc_ptr_t
+_gdk_x11_gc_flush (GdkGC *gc)
+{
+  //Display *xdisplay = GDK_GC_XDISPLAY (gc);
+  GdkGCGix *private = GDK_GC_GIX (gc);
+  gi_gc_ptr_t gix_gc = private->gix_gc;
+
+  if (private->dirty_mask & GDK_GC_DIRTY_CLIP)
+    {
+      GdkRegion *clip_region = _gdk_gc_get_clip_region (gc);
+      
+      if (!clip_region){
+	//XSetClipOrigin (xdisplay, gix_gc,gc->clip_x_origin, gc->clip_y_origin);
+	  }
+      else
+	{
+	  gi_boxrec_t *rectangles;
+          gint n_rects;
+
+          _gdk_region_get_xrectangles (clip_region,
+                                       gc->clip_x_origin,
+                                       gc->clip_y_origin,
+                                       &rectangles,
+                                       &n_rects);
+
+		 // gi_set_gc_clip_rectangles( data->gix_gc,  boxptr, region->numRects);
+	  
+	  gi_set_gc_clip_rectangles ( gix_gc, 
+                              rectangles,
+                              n_rects);
+          
+	  g_free (rectangles);
+	}
+    }
+
+  if (private->dirty_mask & GDK_GC_DIRTY_TS)
+    {
+      //XSetTSOrigin (xdisplay, gix_gc,  gc->ts_x_origin, gc->ts_y_origin);
+    }
+
+  private->dirty_mask = 0;
+  return gix_gc;
+}
+
+#if 1
+void
+_gdk_windowing_gc_set_clip_region (GdkGC           *gc,
+				   const GdkRegion *region)
+{
+  GdkGCGix *x11_gc = GDK_GC_GIX (gc);
+
+  /* Unset immediately, to make sure Xlib doesn't keep the
+   * XID of an old clip mask cached
+   */
+  if ((x11_gc->have_clip_region && !region) || x11_gc->have_clip_mask)
+    {
+      //XSetClipMask (GDK_GC_XDISPLAY (gc), GDK_GC_XGC (gc), None);
+	  gi_set_gc_clip_rectangles( x11_gc->gix_gc,  NULL, 0);
+      x11_gc->have_clip_mask = FALSE;
+    }
+
+  x11_gc->have_clip_region = region != NULL;
+
+  gc->clip_x_origin = 0;
+  gc->clip_y_origin = 0;
+
+  x11_gc->dirty_mask |= GDK_GC_DIRTY_CLIP;
+}
+
+#else
+void
+_gdk_windowing_gc_set_clip_region (GdkGC           *gc,
+                                   const GdkRegion *region)
+{
+  GdkGCGix *data;
+
+  g_return_if_fail (gc != NULL);
+
+  data = GDK_GC_GIX (gc);
+
+  if (region == &data->clip_region)
+    return;  
+
+  if (region){
+	  gi_boxrec_t *boxptr;
+	  gi_boxrec_t _box_static[8];
+	  int i;
+	 
+
+	  if (region->numRects<8) {
+		  boxptr = &_box_static;
+	  }
+	  else{
+		boxptr = g_malloc(region->numRects * sizeof(gi_boxrec_t));
+	  }
+
+	  if (boxptr) {
+		  for (i = 0; i < region->numRects; i++)  {
+			  boxptr[i].x1 = region->rects[i].x1;
+			  boxptr[i].y1 = region->rects[i].y1;
+			  boxptr[i].x2 = region->rects[i].x2;
+			  boxptr[i].y2 = region->rects[i].y2;
+		  }
+
+		gi_set_gc_clip_rectangles( data->gix_gc,  boxptr, region->numRects);
+		if(boxptr != &_box_static)
+		  g_free(boxptr);
+	  }
+	  
+
+    temp_region_init_copy (&data->clip_region, region);
+  }
+  else{
+	gi_set_gc_clip_rectangles( data->gix_gc,  NULL, 0);
+    temp_region_reset (&data->clip_region);
+  }
+
+  gc->clip_x_origin = 0;
+  gc->clip_y_origin = 0;
+  data->values.clip_x_origin = 0;
+  data->values.clip_y_origin = 0;
+
+  gc_unset_clip_mask (gc);
+}
+#endif
+
 #define __GDK_GC_X11_C__
 #include "gdkaliasdef.c"

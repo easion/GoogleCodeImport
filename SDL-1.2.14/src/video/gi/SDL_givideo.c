@@ -64,7 +64,7 @@ SDL_GrabMode GI_GrabInput(_THIS, SDL_GrabMode mode)
 		}
 	}
 	else{
-		//gi_grab_pointer(tb->start_menu->window,TRUE,FALSE,GI_MASK_BUTTON_DOWN,0,GI_BUTTON_L|GI_BUTTON_R|GI_BUTTON_M);
+		//gi_grab_pointer(SDL_Window,TRUE,FALSE,GI_MASK_BUTTON_DOWN,0,GI_BUTTON_L|GI_BUTTON_R|GI_BUTTON_M);
 		gi_clip_cursor(&SDL_bounds);
 		if ( !(SDL_cursorstate & CURSOR_VISIBLE) ) {
 		/*	 */
@@ -208,7 +208,7 @@ static void create_aux_windows (_THIS)
     //props.props = GR_WM_PROPS_NODECORATE ;
    // GrSetWMProperties (FSwindow, & props) ;
 
-    	 gi_set_events_mask (this->hidden->window, flags) ;
+    	// gi_set_events_mask (this->hidden->window, flags) ;
 
 
     //Dprintf ("leave create_aux_windows\n") ;
@@ -288,7 +288,6 @@ static void GIX_DestroyWindow (_THIS, SDL_Surface * screen)
 {
     //Dprintf ("enter GIX_DestroyWindow\n") ;
 
-    //if (! SDL_windowid)
     if (SDL_Window)
 	{
         if (screen && (screen -> flags & SDL_FULLSCREEN)) {
@@ -299,6 +298,7 @@ static void GIX_DestroyWindow (_THIS, SDL_Surface * screen)
         // Destroy the output window
         if (SDL_Window && SDL_Window != GI_DESKTOP_WINDOW_ID) {
             gi_destroy_window (SDL_Window) ;
+			//usleep(30000);
         }
     }
     
@@ -328,6 +328,7 @@ static void GIX_DestroyWindow (_THIS, SDL_Surface * screen)
  */
 SDL_Surface * sdl_netbas_gi_SetVideoMode(_THIS, SDL_Surface *current, int width, int height, int bpp, Uint32 flags)
 {
+	int err;
 	uint32_t wflags =	(GI_MASK_EXPOSURE       |
             GI_MASK_BUTTON_DOWN  | GI_MASK_BUTTON_UP  |
             GI_MASK_FOCUS_IN     | GI_MASK_FOCUS_OUT  |
@@ -347,13 +348,13 @@ SDL_Surface * sdl_netbas_gi_SetVideoMode(_THIS, SDL_Surface *current, int width,
 		this->hidden->buffer=NULL;
 	}
 
-        bpp = GI_RENDER_FORMAT_BPP(si.format);
-        if (bpp == 15) {
+	bpp = GI_RENDER_FORMAT_BPP(si.format);
+	if (bpp == 15) {
 		bpp = 16;
 	}
         
 	this->hidden->buffer = malloc(width * height * (bpp / 8));
-        this->hidden->bpp = bpp;
+    this->hidden->bpp = bpp;
 	memset(this->hidden->buffer, 0, width * height * (bpp / 8));
 
 	if (!SDL_ReallocFormat(current, bpp, 0, 0, 0, 0)) {
@@ -371,46 +372,60 @@ SDL_Surface * sdl_netbas_gi_SetVideoMode(_THIS, SDL_Surface *current, int width,
 	current->pitch = current->w * (bpp / 8);
 	current->pixels = this->hidden->buffer;
 
-
-	this->hidden->window =gi_create_window(GI_DESKTOP_WINDOW_ID, 0,0,width, height,   get_winxp_color(), 0);
-	 gi_set_events_mask (this->hidden->window, wflags) ; 
-
+	this->hidden->window =gi_create_window(GI_DESKTOP_WINDOW_ID, 0,0,width, height, 
+		get_winxp_color(), 0);
+	
 
 	if (!this->hidden->window)
 	{
 		SDL_Unlock_EventThread();
 		printf("Test window error\n");
-		return -1;
+		return NULL;
 	}
+	 gi_set_events_mask (this->hidden->window, wflags) ; 
 	SDL_GC = gi_create_gc(this->hidden->window,NULL);
 	SDL_Image =  gi_create_image_with_data(width, height,this->hidden->buffer,si.format);
 
 	if (!SDL_Image)
 	{
 		SDL_Unlock_EventThread();
-		gi_exit();
-		exit(1);
+		printf("gi_create_image_with_data error\n");
+		return NULL;
 	}
+
+	printf("sdl_netbas_gi_SetVideoMode: gi_create_window %x OK\n", this->hidden->window);
+
 
 	
 	sdl_netbas_gi_SetCaption(this, this->wm_title, this->wm_icon);
-	gi_show_window(this->hidden->window);
+	usleep(100000); //wait for wm
+	err = gi_show_window(this->hidden->window);
+	if (err)
+	{
+		printf("gi_show_window %x faied\n",this->hidden->window);
+	}
 
 	if ( flags & SDL_FULLSCREEN ) {
-		//printf("got full screen\n");
-			current->flags |= SDL_FULLSCREEN;
-			GIX_EnterFullScreen(this);
+		printf("got full screen\n");
+		current->flags |= SDL_FULLSCREEN;
+		GIX_EnterFullScreen(this);
 	} else {
-			current->flags &= ~SDL_FULLSCREEN;
+		current->flags &= ~SDL_FULLSCREEN;
 	}
 
 	gi_window_info_t info;
 
-	gi_get_window_info(this->hidden->window,&info);
+	err = gi_get_window_info(this->hidden->window,&info);
+	if (!err)
+	{
 	SDL_bounds.x=info.x;
 	SDL_bounds.y=info.y;
 	SDL_bounds.w=info.width;
 	SDL_bounds.h=info.height;
+	}
+	else{
+	printf("got full gi_get_window_info %x error\n",this->hidden->window);
+	}
 
 	SDL_Unlock_EventThread();
 	return current ;
@@ -518,6 +533,8 @@ void sdl_netbas_gi_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
 	int n = numrects;
 	SDL_Rect *r = rects;
 
+	gi_gc_attch_window(SDL_GC, SDL_Window);
+
 	while (n--) {
 		gi_bitblt_bitmap( SDL_GC,r->x,r->y,r->w,r->h,SDL_Image,r->x,r->y);
 		r++;
@@ -546,6 +563,7 @@ void sdl_netbas_gi_VideoQuit(_THIS)
 		this->screen->pixels = NULL;
 	}
 
+	printf("sdl_netbas_gi_VideoQuit called\n");
 	gi_exit();
 	
 	

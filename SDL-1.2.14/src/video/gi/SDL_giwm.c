@@ -10,7 +10,7 @@
 void sdl_netbas_gi_SetCaption (_THIS, const char *title, const char *icon)
 {
 	SDL_Lock_EventThread();
-	gi_set_window_caption(this->hidden->window, title);
+	gi_set_window_utf8_caption(this->hidden->window, title);
 	gi_set_window_icon_name(this->hidden->window,icon);
 	SDL_Unlock_EventThread();
 

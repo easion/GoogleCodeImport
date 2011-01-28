@@ -108,7 +108,6 @@ int sdl_netbas_gi_GetWMInfo (_THIS, SDL_SysWMinfo *info);
 #define OffsetY              (this -> hidden -> OffsetY)
 
 #if 0
-#define SDL_windowid         (this -> hidden -> SDL_windowid)
 #define Image_buff           (this -> hidden -> Image_buff)
 #define Clientfb             (this -> hidden -> Clientfb)
 #define SDL_Visual           (this -> hidden -> SDL_Visual)

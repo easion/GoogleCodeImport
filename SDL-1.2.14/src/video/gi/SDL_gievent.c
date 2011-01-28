@@ -1,67 +1,11 @@
 
 
 #include "SDL_gi.h"
+#include <gi/property.h>
 
 #define dbg_printf 
 static SDLKey sdl_netbas_gi_keymap[128];
-#if 0
 
-void sdl_netbas_gi_atexit (s_window_t *window)
-{
-	if (sdl_netbas_gi_running) {
-		while (sdl_netbas_gi_running_) {
-			usleep(20000);
-		}
-		sdl_netbas_gi_running = 0;
-		SDL_PrivateQuit();
-	}
-}
-
-
-
-
-void sdl_netbas_gi_atevent (s_window_t *window, gi_msg_t *event)
-{
-        int state = 0;
-        int button = 0;
-        
-	if ((event->type & MOUSE_EVENT) &&
-	    ((event->mouse->x >= window->surface->buf->x) &&
-	     (event->mouse->x <= window->surface->buf->x + window->surface->buf->w) &&
-	     (event->mouse->y >= window->surface->buf->y) &&
-	     (event->mouse->y <= window->surface->buf->y + window->surface->buf->h))) {
-		if (event->type & MOUSE_OVER) {
-			if (event->type & MOUSE_HINT) {
-				state = SDL_PRESSED;
-			}
-			SDL_PrivateMouseMotion(state, 0, event->mouse->x - window->surface->buf->x, event->mouse->y - window->surface->buf->y);
-		} else if (event->type & (MOUSE_PRESSED | MOUSE_RELEASED | MOUSE_CLICKED)) {
-			if (event->type & (MOUSE_PRESSED)) {
-				state = SDL_PRESSED;
-			}
-			if (event->type & (MOUSE_RELEASED | MOUSE_CLICKED)) {
-				state = SDL_RELEASED;
-			}
-			switch (event->mouse->b) {
-				case MOUSE_RIGHTBUTTON:		button = SDL_BUTTON_RIGHT;	break;
-				case MOUSE_MIDDLEBUTTON:	button = SDL_BUTTON_MIDDLE;	break;
-				case MOUSE_LEFTBUTTON:		button = SDL_BUTTON_LEFT;	break;
-				default:			button = 0;			break;
-			}
-			SDL_PrivateMouseButton(state, button, event->mouse->x - window->surface->buf->x, event->mouse->y - window->surface->buf->y);
-		}
-	}
-	if (event->type & KEYBD_EVENT) {
-		SDL_keysym keysym;
-		if (event->type & KEYBD_PRESSED) {
-			state = SDL_PRESSED;
-		} else if (event->type & KEYBD_RELEASED) {
-			state = SDL_RELEASED;
-		}
-		SDL_PrivateKeyboard(state, sdl_netbas_gi_translatekey(event, &keysym));
-	}
-}
-#endif
 
 SDL_keysym * sdl_netbas_gi_translatekey(gi_msg_t *event, SDL_keysym *keysym)
 {
@@ -131,6 +75,7 @@ void GI_RefreshDisplay (_THIS)
            gi_bitblt_bitmap (SDL_Window, SDL_GC, 0, 0, this -> screen -> w, 
                 this -> screen -> h, SDL_Image, 0,0) ;
 	}*/
+	gi_gc_attch_window(SDL_GC, SDL_Window);
 	gi_draw_image(SDL_GC,SDL_Image, 0, 0);
 
     gi_flush();
@@ -150,7 +95,7 @@ void sdl_netbas_gi_PumpEvents(_THIS)
 	int posted = 0;
 	err=1;
 
-    while (err==1) {		
+    while (err == 1) {		
 
     err = gi_get_message (&event,MSG_NO_WAIT) ;
 
@@ -225,30 +170,21 @@ void sdl_netbas_gi_PumpEvents(_THIS)
 	{
 		int button = event.params[2] ;
 		
-		dbg_printf ("button down\n") ;
+		//printf ("button down\n") ;
 
-		switch (button) {
-			case GI_BUTTON_L :
-				button = 1 ;
-				break ;
-			case GI_BUTTON_M :
-				button = 2 ;
-				break ;
-			case GI_BUTTON_R :
-				button = 3 ;
-				break ;
+		if (button & GI_BUTTON_L)
+			button = 1 ;
+		else if (button & GI_BUTTON_M)
+			button = 2 ;
+		else if (button & GI_BUTTON_R)
+			button = 3 ;
+		else if (button & GI_BUTTON_WHEEL_UP)
+			button = SDL_BUTTON_WHEELUP ;
+		else if (button & GI_BUTTON_WHEEL_DOWN)
+			button = SDL_BUTTON_WHEELDOWN ;
+		else
+			button = 0;
 
-			case GI_BUTTON_WHEEL_UP:
-				button = SDL_BUTTON_WHEELUP;			
-			break;
-
-			case GI_BUTTON_WHEEL_DOWN:
-				button = SDL_BUTTON_WHEELDOWN;				
-			break;
-
-			default :
-				button = 0 ;
-		}
 		last_button_down = button ;
 		
 		/*if (currently_fullscreen) {
@@ -259,10 +195,9 @@ void sdl_netbas_gi_PumpEvents(_THIS)
 		} else {*/
 
 		//printf("SDL_PrivateMouseButton xxx %d %d\n", event.x, event.y);
-			SDL_PrivateMouseButton (SDL_PRESSED, button, 
-				event.x, event.y) ;
+			SDL_PrivateMouseButton (SDL_PRESSED, button,event.x, event.y) ;
 
-			if (button>GI_BUTTON_WHEEL_UP)
+			if (button==SDL_BUTTON_WHEELUP || button==SDL_BUTTON_WHEELDOWN)
 			{
 				SDL_PrivateMouseButton( SDL_RELEASED, button, 0, 0);
 			}
@@ -281,6 +216,7 @@ void sdl_netbas_gi_PumpEvents(_THIS)
 					event.x - OffsetX, event.y - OffsetY) ;
 			}
 		} else {*/
+		if(last_button_down)
 			SDL_PrivateMouseButton (SDL_RELEASED, last_button_down, 
 				event.x, event.y) ;
 		//}
@@ -326,8 +262,9 @@ void sdl_netbas_gi_PumpEvents(_THIS)
 
 	case GI_MSG_CLIENT_MSG:
 	{
-		if(event.client.client_type == gi_intern_atom ( "WM_PROTOCOLS",FALSE)
-			&&event.params[0] == gi_intern_atom ( "WM_DELETE_WINDOW",TRUE)){				
+		if(event.client.client_type == GA_WM_PROTOCOLS
+			&& event.params[0] == GA_WM_DELETE_WINDOW){
+			printf("close require\n");
 		SDL_PrivateQuit () ;
 		}
 		

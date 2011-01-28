@@ -238,9 +238,14 @@ typedef struct
 typedef struct
 {
   GdkGC             parent_instance;
-
+#if 1
+  guint16 dirty_mask;
+  guint have_clip_region : 1;
+  guint have_clip_mask : 1;
+  guint depth : 8;
+#else
   GdkRegion         clip_region;
-
+#endif
   GdkGCValuesMask   values_mask;
   GdkGCValues       values;
   gi_gc_ptr_t gix_gc;

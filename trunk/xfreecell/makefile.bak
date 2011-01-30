@@ -1,0 +1,16 @@
+OBJECTS=card.o freecell.o option.o stack.o subwindows.o undo.o util.o
+CC=g++
+CFLAGS=-g -Wall -DSHAPE
+LIBS=-lm -L. -lns -L/usr/X11R6/lib -lXext -lX11
+
+all: $(OBJECTS) lib
+	$(CC) -o a.out $(CFLAGS) $(OBJECTS) $(LIBS)
+
+%.o: %.cpp
+	$(CC) -c $(CFLAGS) $<
+
+clean:
+	rm -f *~ *.o a.out
+
+lib:
+	make -C widget lib

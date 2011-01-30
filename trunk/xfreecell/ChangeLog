@@ -1,0 +1,11 @@
+	* deck initialize uses animation
+	* added 33 step animation
+	* removed default done stack bitmap
+1/22/2001
+
+
+
+TODO
+	round clipmasks
+	create clipmask from bitmap
+	cursor

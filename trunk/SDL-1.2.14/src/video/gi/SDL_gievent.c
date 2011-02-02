@@ -10,9 +10,9 @@ static SDLKey sdl_netbas_gi_keymap[128];
 SDL_keysym * sdl_netbas_gi_translatekey(gi_msg_t *event, SDL_keysym *keysym)
 {
 	int k;
-	long mod = event->params[3];
-	int key = event->params[4];
-	char ch = event->params[2];
+	long mod = event->params[2]>>16;
+	int key = event->params[3];
+	char ch = key;
 
 	keysym->mod = KMOD_NONE;
 
@@ -148,18 +148,18 @@ void sdl_netbas_gi_PumpEvents(_THIS)
 
 		if (SDL_VideoSurface) {
 		   /* if (currently_fullscreen) {
-				if (check_boundary (this, event.x, event.y)) {
-					SDL_PrivateMouseMotion (0, 0, event.x - OffsetX, 
-						event.y - OffsetY) ;
+				if (check_boundary (this, event.body.rect.x, event.body.rect.y)) {
+					SDL_PrivateMouseMotion (0, 0, event.body.rect.x - OffsetX, 
+						event.body.rect.y - OffsetY) ;
 				}
 			} else {*/
 				if ( mouse_relative ) {
-					SDL_PrivateMouseMotion (0, 0, event.x, event.y) ;
+					SDL_PrivateMouseMotion (0, 0, event.body.rect.x, event.body.rect.y) ;
 				//SDL_PrivateMouseMotion (0, 1, event.params[0], event.params[1]) ;
 				//posted = X11_WarpedMotion(this,&xevent);
 				}
 				else{
-				SDL_PrivateMouseMotion (0, 0, event.x, event.y) ;
+				SDL_PrivateMouseMotion (0, 0, event.body.rect.x, event.body.rect.y) ;
 				}
 			//}
 		}
@@ -188,14 +188,14 @@ void sdl_netbas_gi_PumpEvents(_THIS)
 		last_button_down = button ;
 		
 		/*if (currently_fullscreen) {
-			if (check_boundary (this, event.x, event.y)) {
+			if (check_boundary (this, event.body.rect.x, event.body.rect.y)) {
 				SDL_PrivateMouseButton (SDL_PRESSED, button, 
-					event.x - OffsetX, event.y - OffsetY) ;
+					event.body.rect.x - OffsetX, event.body.rect.y - OffsetY) ;
 			}
 		} else {*/
 
-		//printf("SDL_PrivateMouseButton xxx %d %d\n", event.x, event.y);
-			SDL_PrivateMouseButton (SDL_PRESSED, button,event.x, event.y) ;
+		//printf("SDL_PrivateMouseButton xxx %d %d\n", event.body.rect.x, event.body.rect.y);
+			SDL_PrivateMouseButton (SDL_PRESSED, button,event.body.rect.x, event.body.rect.y) ;
 
 			if (button==SDL_BUTTON_WHEELUP || button==SDL_BUTTON_WHEELDOWN)
 			{
@@ -211,14 +211,14 @@ void sdl_netbas_gi_PumpEvents(_THIS)
 		dbg_printf ("button up\n") ;
 
 		/*if (currently_fullscreen) {
-			if (check_boundary (this, event.x, event.y)) {
+			if (check_boundary (this, event.body.rect.x, event.body.rect.y)) {
 				SDL_PrivateMouseButton (SDL_RELEASED, last_button_down, 
-					event.x - OffsetX, event.y - OffsetY) ;
+					event.body.rect.x - OffsetX, event.body.rect.y - OffsetY) ;
 			}
 		} else {*/
 		if(last_button_down)
 			SDL_PrivateMouseButton (SDL_RELEASED, last_button_down, 
-				event.x, event.y) ;
+				event.body.rect.x, event.body.rect.y) ;
 		//}
 		last_button_down = 0 ;
 		break ;
@@ -262,7 +262,7 @@ void sdl_netbas_gi_PumpEvents(_THIS)
 
 	case GI_MSG_CLIENT_MSG:
 	{
-		if(event.client.client_type == GA_WM_PROTOCOLS
+		if(event.body.client.client_type == GA_WM_PROTOCOLS
 			&& event.params[0] == GA_WM_DELETE_WINDOW){
 			printf("close require\n");
 		SDL_PrivateQuit () ;

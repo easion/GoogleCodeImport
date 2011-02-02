@@ -293,7 +293,7 @@ void sdl_netbas_gi_PumpEvents(_THIS)
 
 		if (event.params[0] == GI_STRUCT_CHANGE_RESIZE){
 			//printf("sdl got resize\n");
-		SDL_PrivateResize (event.width, event.height) ;
+		SDL_PrivateResize (event.body.rect.w, event.body.rect.h) ;
 		}
 
 

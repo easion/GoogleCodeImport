@@ -10,7 +10,7 @@ static SDLKey sdl_netbas_gi_keymap[128];
 SDL_keysym * sdl_netbas_gi_translatekey(gi_msg_t *event, SDL_keysym *keysym)
 {
 	int k;
-	long mod = event->params[2]>>16;
+	long mod = event->body.message[3];
 	int key = event->params[3];
 	char ch = key;
 

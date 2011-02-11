@@ -204,6 +204,8 @@ gdk_pixmap_new (GdkDrawable *drawable,
   return pixmap;
 }
 
+uint8_t *bitmap_create_from_data (const uint8_t *data, int width, int height,gi_bool_t x11_comp, int *pitch);
+
 GdkPixmap *
 gdk_bitmap_create_from_data (GdkDrawable   *drawable,
                              const gchar *data,
@@ -230,39 +232,40 @@ gdk_bitmap_create_from_data (GdkDrawable   *drawable,
       guchar *dst;
       gint    pitch;
 	  gi_image_t* surface;
+	  gc = gi_create_gc(GDK_DRAWABLE_IMPL_GIX (GDK_PIXMAP_OBJECT (pixmap)->impl)->window_id,NULL);
 
-      //IGixSurface *surface;
-
-
+#if 1
+	  dst = bitmap_create_from_data(data, width,height,TRUE, &pitch);
+	  if(dst){
+		gi_image_t img;
+		img.rgba = (gi_color_t*)dst;
+		img.format = GI_RENDER_a8;
+		img.w = width;
+		img.h = height;
+		img.pitch = pitch;
+		gi_draw_image(gc,&img,0,0);
+		free(dst);
+	  }
+#else
+	  gint i, j;
       surface = gi_create_image_depth(width,height,GI_RENDER_a8);
 	  dst = surface->rgba;
 	  pitch = surface->pitch;
 
-      //surface = GDK_DRAWABLE_IMPL_GIX (GDK_PIXMAP_OBJECT (pixmap)->impl)->surface;
-
-      ///if (surface->Lock( surface, DSLF_WRITE, (void**)(&dst), &pitch ) == 0)
-        {
-          gint i, j;
-
-          for (i = 0; i < height; i++)
-            {
-	      for (j = 0; j < width; j++)
+	  for (i = 0; i < height; i++)
 		{
+	    for (j = 0; j < width; j++){
 		  dst[j] = GET_PIXEL (data, j) * 255;
 		}
-
-              data += (width + 7) / 8;
-	      dst += pitch;
-            }
-
-			gc = gi_create_gc(GDK_DRAWABLE_IMPL_GIX (GDK_PIXMAP_OBJECT (pixmap)->impl)->window_id,NULL);
+		data += (width + 7) / 8;
+		dst += pitch;
+		}
 
 		gi_draw_image(gc,surface,0,0);
-		gi_destroy_gc(gc);
 		gi_destroy_image(surface);
+#endif
+		gi_destroy_gc(gc);
 
-          //surface->Unlock( surface );
-        }
     }
 
 #undef GET_PIXEL
@@ -299,8 +302,7 @@ gdk_pixmap_create_from_data (GdkDrawable   *drawable,
       gchar            *dst;
       gint              pitch;
       gint              src_pitch;
-	  unsigned format ;
-	  
+	  unsigned format ;	  
 
       depth = gdk_drawable_get_depth (pixmap);
       src_pitch = width * ((depth + 7) / 8);

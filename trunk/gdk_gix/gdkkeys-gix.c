@@ -1715,11 +1715,11 @@ gdk_gix_translate_key_event (gi_msg_t *dfb_event,
 	g_return_if_fail (dfb_event != NULL);
 	g_return_if_fail (event != NULL);
 
-	modifiers=dfb_event->params[3];
-	key_id=dfb_event->params[4];
-	key_code=dfb_event->params[4];
-	keyval=dfb_event->params[4];
-	key_symbol=dfb_event->params[4];
+	modifiers=dfb_event->body.message[1];
+	key_id=dfb_event->params[3];
+	key_code=dfb_event->params[3];
+	keyval=dfb_event->params[3];
+	key_symbol=dfb_event->params[3];
 
 	gdk_gix_convert_modifiers (modifiers, locks);
 

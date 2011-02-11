@@ -238,8 +238,8 @@ typedef struct
 typedef struct
 {
   GdkGC             parent_instance;
-#if 1
   guint16 dirty_mask;
+#if 0
   guint have_clip_region : 1;
   guint have_clip_mask : 1;
   guint depth : 8;

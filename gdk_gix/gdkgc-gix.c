@@ -756,11 +756,11 @@ _gdk_region_get_xrectangles (const GdkRegion *region,
 }
 
 
+#if 0
 
 gi_gc_ptr_t
 _gdk_x11_gc_flush (GdkGC *gc)
 {
-  //Display *xdisplay = GDK_GC_XDISPLAY (gc);
   GdkGCGix *private = GDK_GC_GIX (gc);
   gi_gc_ptr_t gix_gc = private->gix_gc;
 
@@ -801,7 +801,6 @@ _gdk_x11_gc_flush (GdkGC *gc)
   return gix_gc;
 }
 
-#if 1
 void
 _gdk_windowing_gc_set_clip_region (GdkGC           *gc,
 				   const GdkRegion *region)

@@ -490,8 +490,8 @@ gdk_event_translate (gi_msg_t *g_event,
       GDK_NOTE (EVENTS,
 		g_message ("expose:\t\twindow: %ld  %d	x,y: %d %d  w,h: %d %d%s",
 			   g_event->window, g_event->count,
-			   g_event->x, g_event->y,
-			   g_event->width, g_event->height,
+			   g_event->body.rect.x, g_event->body.rect.y,
+			   g_event->body.rect.w, g_event->body.rect.h,
 			   event->any.send_event ? " (send)" : ""));
       
       if (private == NULL)
@@ -505,10 +505,10 @@ gdk_event_translate (gi_msg_t *g_event,
 	int xoffset = 0;
 	int yoffset = 0;
 
-	expose_rect.x = g_event->x + xoffset;
-	expose_rect.y = g_event->y + yoffset;
-	expose_rect.width = g_event->width;
-	expose_rect.height = g_event->height;
+	expose_rect.x = g_event->body.rect.x + xoffset;
+	expose_rect.y = g_event->body.rect.y + yoffset;
+	expose_rect.width = g_event->body.rect.w;
+	expose_rect.height = g_event->body.rect.h;
 
 	if (return_exposes) //dpp
 	  {
@@ -564,13 +564,13 @@ gdk_event_translate (gi_msg_t *g_event,
 
             event_win = _gdk_gix_pointer_grab_window;
             impl = GDK_DRAWABLE_IMPL_GIX (GDK_WINDOW_OBJECT (event_win)->impl);            
-            g_event->x = root_x - impl->abs_x; //FIXME
-            g_event->y = root_y - impl->abs_y;
+            g_event->body.rect.x = root_x - impl->abs_x; //FIXME
+            g_event->body.rect.y = root_y - impl->abs_y;
           }
         else
           {
             event_win = gdk_gix_child_at (window,
-                                               &g_event->x, &g_event->y);
+                                               &g_event->body.rect.x, &g_event->body.rect.y);
           }
 
         if (event_win)
@@ -586,8 +586,8 @@ gdk_event_translate (gi_msg_t *g_event,
             event->scroll.direction = GDK_SCROLL_LEFT;
           else
             event->scroll.direction = GDK_SCROLL_RIGHT;
-		  event->scroll.x = g_event->x ;
-		  event->scroll.y = g_event->y ;
+		  event->scroll.x = g_event->body.rect.x ;
+		  event->scroll.y = g_event->body.rect.y ;
 		  event->scroll.x_root = (gfloat)_gdk_gix_mouse_x;
 		  event->scroll.y_root = (gfloat)_gdk_gix_mouse_y;
 		  event->scroll.state = (GdkModifierType) _gdk_gix_modifiers;
@@ -633,14 +633,14 @@ gdk_event_translate (gi_msg_t *g_event,
             child = _gdk_gix_pointer_grab_window;
             impl  = GDK_DRAWABLE_IMPL_GIX (GDK_WINDOW_OBJECT (child)->impl);
             
-            g_event->x = g_event->params[0] - impl->abs_x;
-            g_event->y = g_event->params[1] - impl->abs_y;
+            g_event->body.rect.x = g_event->params[0] - impl->abs_x;
+            g_event->body.rect.y = g_event->params[1] - impl->abs_y;
           }
         else if (!_gdk_gix_pointer_grab_window ||
                  (_gdk_gix_pointer_grab_owner_events == TRUE))
           {
-            g_event->x = wx;
-            g_event->y = wy;
+            g_event->body.rect.x = wx;
+            g_event->body.rect.y = wy;
           }
         else
           {
@@ -661,8 +661,8 @@ gdk_event_translate (gi_msg_t *g_event,
 
             event->button.x_root = _gdk_gix_mouse_x;
             event->button.y_root = _gdk_gix_mouse_y;
-            event->button.x = g_event->x;
-            event->button.y = g_event->y;
+            event->button.x = g_event->body.rect.x;
+            event->button.y = g_event->body.rect.y;
             event->button.state  = _gdk_gix_modifiers;
             event->button.button = button;
             event->button.device = display->core_pointer;
@@ -719,7 +719,7 @@ gdk_event_translate (gi_msg_t *g_event,
         _gdk_gix_mouse_x = root_x;
         _gdk_gix_mouse_y = root_y;
 
-	//child = gdk_gix_child_at (window, &g_event->x, &g_event->y);
+	//child = gdk_gix_child_at (window, &g_event->body.rect.x, &g_event->body.rect.y);
     /* Go all the way to root to catch popup menus */
     int wx=_gdk_gix_mouse_x;
     int wy=_gdk_gix_mouse_y;
@@ -741,8 +741,8 @@ gdk_event_translate (gi_msg_t *g_event,
 		child = _gdk_gix_pointer_grab_window;
 		impl = GDK_DRAWABLE_IMPL_GIX (GDK_WINDOW_OBJECT (child)->impl);
 
-		g_event->x = _gdk_gix_mouse_x - impl->abs_x;
-		g_event->y = _gdk_gix_mouse_y - impl->abs_y;
+		g_event->body.rect.x = _gdk_gix_mouse_x - impl->abs_x;
+		g_event->body.rect.y = _gdk_gix_mouse_y - impl->abs_y;
 	      }
 
 	    event = gdk_gix_event_make (child, GDK_MOTION_NOTIFY);
@@ -750,8 +750,8 @@ gdk_event_translate (gi_msg_t *g_event,
 	    event->motion.x_root = _gdk_gix_mouse_x;
 	    event->motion.y_root = _gdk_gix_mouse_y;
 
-	    //event->motion.x = g_event->x;
-	    //event->motion.y = g_event->y;
+	    //event->motion.x = g_event->body.rect.x;
+	    //event->motion.y = g_event->body.rect.y;
 	    event->motion.x = wx;
 	    event->motion.y = wy;
 
@@ -795,16 +795,16 @@ gdk_event_translate (gi_msg_t *g_event,
       {
         GdkWindow *event_win;
 
-        private->x = g_event->x;
-        private->y = g_event->y;
+        private->x = g_event->body.rect.x;
+        private->y = g_event->body.rect.y;
 
         event_win = gdk_gix_other_event_window (window, GDK_CONFIGURE);
 
         if (event_win)
           {
             event = gdk_gix_event_make (event_win, GDK_CONFIGURE);
-            event->configure.x = g_event->x;
-            event->configure.y = g_event->y;
+            event->configure.x = g_event->body.rect.x;
+            event->configure.y = g_event->body.rect.y;
             event->configure.width =
               GDK_DRAWABLE_IMPL_GIX (private->impl)->width;
             event->configure.height =
@@ -816,8 +816,8 @@ gdk_event_translate (gi_msg_t *g_event,
       break;
 
     case DWET_POSITION_SIZE:
-      private->x = g_event->x;
-      private->y = g_event->y;
+      private->x = g_event->body.rect.x;
+      private->y = g_event->body.rect.y;
 #endif
       /* fallthru */
 
@@ -842,12 +842,12 @@ gdk_event_translate (gi_msg_t *g_event,
             event = gdk_gix_event_make (event_win, GDK_CONFIGURE);
 				event->configure.x      = private->x;
 				event->configure.y      = private->y;
-				event->configure.width  = g_event->width;
-				event->configure.height = g_event->height;
+				event->configure.width  = g_event->body.rect.w;
+				event->configure.height = g_event->body.rect.h;
           }
 
-			impl->width  = g_event->width;
-			impl->height = g_event->height;
+			impl->width  = g_event->body.rect.w;
+			impl->height = g_event->body.rect.h;
 
         for (list = private->children; list; list = list->next)
           {
@@ -868,16 +868,16 @@ gdk_event_translate (gi_msg_t *g_event,
         gdk_window_invalidate_rect (window, NULL, TRUE);  //FIXME DPP
 		}
 		else if (g_event->params[0] == GI_STRUCT_CHANGE_MOVE){ //move
-			private->x = g_event->x;
-			private->y = g_event->y;
+			private->x = g_event->body.rect.x;
+			private->y = g_event->body.rect.y;
 
 			event_win = gdk_gix_other_event_window (window, GDK_CONFIGURE);
 
 			if (event_win)
 			  {
 				event = gdk_gix_event_make (event_win, GDK_CONFIGURE);
-				event->configure.x = g_event->x;
-				event->configure.y = g_event->y;
+				event->configure.x = g_event->body.rect.x;
+				event->configure.y = g_event->body.rect.y;
 				event->configure.width =
 				  GDK_DRAWABLE_IMPL_GIX (private->impl)->width;
 				event->configure.height =
@@ -933,7 +933,7 @@ gdk_event_translate (gi_msg_t *g_event,
         _gdk_gix_mouse_x = root_x;
         _gdk_gix_mouse_y = root_y;
 
-        child = gdk_gix_child_at (window, &g_event->x, &g_event->y);
+        child = gdk_gix_child_at (window, &g_event->body.rect.x, &g_event->body.rect.y);
 
         /* this makes sure pointer is set correctly when it previously left
          * a window being not standard shaped
@@ -959,7 +959,7 @@ gdk_event_translate (gi_msg_t *g_event,
 		 GdkWindow *event_win;   
 		 printf("xxx GI_MSG_CLIENT_MSG got message\n");
 
-			if(g_event->client.client_type == GA_WM_PROTOCOLS
+			if(g_event->body.client.client_type == GA_WM_PROTOCOLS
 					&&g_event->params[0]  == GA_WM_DELETE_WINDOW ){
 				event_win = gdk_gix_other_event_window (window, GDK_DELETE);
 

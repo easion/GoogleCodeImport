@@ -49,7 +49,7 @@ static void lngi_surface_register_update (void *dev)
 		return;
 	}
 	wd = (lngi_device_t *) ((struct graphics_device *) dev)->driver_data;
-	gi_bitblt_bitmap( wd->gc,wd->update.x, wd->update.y, wd->update.w, wd->update.h,wd->img,wd->update.x, wd->update.y);
+	gi_bitblt_image( wd->gc,wd->update.x, wd->update.y, wd->update.w, wd->update.h,wd->img,wd->update.x, wd->update.y);
 
 	wd->update = (gi_cliprect_t) {-1, -1, -1, -1};
 }
@@ -69,8 +69,8 @@ static void gi_process_events(void *data)
 	replay_event=gi_get_message (&event,MSG_NO_WAIT);
 	if (replay_event>0)
 	{
-		x=event.x;
-		y=event.y;
+		x=event.body.rect.x;
+		y=event.body.rect.y;
 		switch (event.type)
 		{
 	case GI_MSG_MOUSE_ENTER :
@@ -95,6 +95,8 @@ static void gi_process_events(void *data)
             case GI_MSG_BUTTON_DOWN :
             {
                 int button = event.params[2] ;
+
+				gi_set_focus_window(lngi_root->window);
                 
                 DEBUGF ("button down\n") ;
 
@@ -148,10 +150,11 @@ static void gi_process_events(void *data)
 
             case GI_MSG_KEY_DOWN :
             {
-				long mod=event.params[3];
+				long mod=event.body.message[3];
 
-				switch (event.params[4]) {
-		//case G_KEY_RETURN:	k = KBD_ENTER;	break;
+				switch (event.params[3]) {
+		case G_KEY_ENTER:	k = KBD_ENTER;	break;
+		case G_KEY_RETURN:	k = KBD_ENTER;	break;
 		case G_KEY_DELETE:	k = KBD_BS;	break;
 		case G_KEY_TAB:	k = KBD_TAB;	break;
 		case G_KEY_ESCAPE:	k = KBD_ESC;	break;
@@ -178,7 +181,7 @@ static void gi_process_events(void *data)
 		case G_KEY_F11:	k = KBD_F11;	break;
 		case G_KEY_F12:	k = KBD_F12;	break;
 		default:
-			k = event.params[4];
+			k = event.params[3];
 			if (!isprint(k)) {
 				//return;
 			}
@@ -216,7 +219,7 @@ static void gi_process_events(void *data)
 
 				printf("links GI_MSG_CLIENT_MSG got exit message\n");
 
-			if(event.client.client_type== GA_WM_PROTOCOLS
+			if(event.body.client.client_type== GA_WM_PROTOCOLS
 					&&event.params[0] == GA_WM_DELETE_WINDOW){
 				
                 lngi_root->gd->active->keyboard_handler(lngi_root->gd->active, KBD_CLOSE, 0);
@@ -228,10 +231,10 @@ static void gi_process_events(void *data)
             {				
 
 				struct rect r;
-				r.x1 = 0;
-				r.y1 = 0;
-				r.x2 = event.width;
-				r.y2 = event.height;
+				r.x1 = event.body.rect.x;
+				r.y1 = event.body.rect.y;
+				r.x2 = event.body.rect.x+event.body.rect.w;
+				r.y2 = event.body.rect.y+event.body.rect.h;
 
 				lngi_root->gd->active->redraw_handler(lngi_root->gd->active, &r);
                 
@@ -239,10 +242,10 @@ static void gi_process_events(void *data)
             }
 
 			case GI_MSG_CONFIGURENOTIFY:
-				if (lngi_root->gd->active->size.x2==event.width&&lngi_root->gd->active->size.y2==event.height)break;
+				if (lngi_root->gd->active->size.x2==event.body.rect.w&&lngi_root->gd->active->size.y2==event.body.rect.h)break;
 
-			lngi_root->gd->active->size.x2=event.width;
-			lngi_root->gd->active->size.y2=event.height;
+			lngi_root->gd->active->size.x2=event.body.rect.w;
+			lngi_root->gd->active->size.y2=event.body.rect.h;
 
 			lngi_root->gd->active->resize_handler(lngi_root->gd->active);
 

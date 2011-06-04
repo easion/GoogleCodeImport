@@ -502,6 +502,10 @@ namespace agg
 		GI_RGB( 240, 240, 242 ),
 		0);
 
+        gi_set_events_mask( 
+                     m_specific->m_window, 
+                     xevent_mask);   
+
         m_specific->m_gc = gi_create_gc( 
                                      m_specific->m_window, 
                                      NULL); 
@@ -537,9 +541,7 @@ namespace agg
         gi_show_window( 
                    m_specific->m_window);
 
-        gi_set_events_mask( 
-                     m_specific->m_window, 
-                     xevent_mask);       
+    
        
 
         return true;

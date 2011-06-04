@@ -502,6 +502,12 @@ namespace agg
 		GI_RGB( 240, 240, 242 ),
 		0);
 
+		if (!m_specific->m_window)
+		{
+			gi_exit();
+            return false;
+		}
+
         gi_set_events_mask( 
                      m_specific->m_window, 
                      xevent_mask);   
@@ -509,8 +515,21 @@ namespace agg
         m_specific->m_gc = gi_create_gc( 
                                      m_specific->m_window, 
                                      NULL); 
+
+		if (!m_specific->m_gc)
+		{
+			gi_exit();
+            return false;
+		}
+
         m_specific->m_buf_window = 
             new unsigned char[width * height * (m_bpp / 8)];
+
+		if (!m_specific->m_buf_window)
+		{
+			gi_exit();
+            return false;
+		}
 
         memset(m_specific->m_buf_window, 255, width * height * (m_bpp / 8));
         

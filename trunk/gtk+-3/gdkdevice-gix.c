@@ -187,6 +187,58 @@ gdk_device_core_warp (GdkDevice *device,
 {
 }
 
+
+
+const int _gdk_gix_event_mask_table[21] =
+{
+  GI_MASK_EXPOSURE,
+  GI_MASK_MOUSE_MOVE,
+  GI_MASK_MOUSE_MOVE, //PointerMotionHintMask,
+  GI_MASK_MOUSE_MOVE, //ButtonMotionMask,
+  GI_MASK_MOUSE_MOVE, //Button1MotionMask,
+  GI_MASK_MOUSE_MOVE, //Button2MotionMask,
+  GI_MASK_MOUSE_MOVE, //Button3MotionMask,
+  GI_MASK_BUTTON_DOWN,
+  GI_MASK_BUTTON_UP,
+  GI_MASK_KEY_DOWN,
+  GI_MASK_KEY_UP,
+  GI_MASK_MOUSE_ENTER,
+  GI_MASK_MOUSE_EXIT,
+  GI_MASK_FOCUS_IN|GI_MASK_FOCUS_OUT,
+  GI_MASK_CONFIGURENOTIFY,
+  GI_MASK_PROPERTYNOTIFY,
+  GI_MASK_WINDOW_SHOW|GI_MASK_WINDOW_HIDE,
+  0,                    /* PROXIMITY_IN */
+  0,                    /* PROXIMTY_OUT */
+  GI_MASK_CONFIGURENOTIFY,
+  GI_MASK_BUTTON_DOWN      /* SCROLL; on X mouse wheel events is treated as mouse button 4/5 */
+};
+
+const gint _gdk_gix_event_mask_table_size = G_N_ELEMENTS (_gdk_gix_event_mask_table);
+
+
+void
+gdk_gix_event_source_select_events (GdkEventSource *source,
+                                    gi_window_id_t          window,
+                                    GdkEventMask    event_mask,
+                                    unsigned int    extra_x_mask)
+{
+  unsigned int xmask = extra_x_mask;
+  GList *list;
+  gint i; 
+
+  for (i = 0; i < _gdk_gix_event_mask_table_size; i++)
+    {
+      if (event_mask & (1 << (i + 1)))
+        xmask |= _gdk_gix_event_mask_table[i];
+    }
+
+  gi_set_events_mask ( window, xmask|GI_MASK_CLIENT_MSG);
+}
+
+
+
+
 static GdkGrabStatus
 gdk_device_core_grab (GdkDevice    *device,
                       GdkWindow    *window,
@@ -196,6 +248,70 @@ gdk_device_core_grab (GdkDevice    *device,
                       GdkCursor    *cursor,
                       guint32       time_)
 {
+  GdkDisplay *display;
+  gi_window_id_t xwindow, xconfine_to;
+  gint status;
+
+  display = gdk_device_get_display (device);
+
+  xwindow = GDK_WINDOW_XID (window);
+
+  if (confine_to)
+    confine_to = _gdk_window_get_impl_window (confine_to);
+
+  if (!confine_to || GDK_WINDOW_DESTROYED (confine_to))
+    xconfine_to = 0;
+  else
+    xconfine_to = GDK_WINDOW_XID (confine_to);
+
+
+  if (gdk_device_get_source (device) == GDK_SOURCE_KEYBOARD)
+    {
+      /* Device is a keyboard */
+      status = gi_grab_keyboard (
+                              xwindow,
+                              owner_events,
+                              0, 0 );
+    }
+  else
+    {
+      int xcursor = 0;
+      guint xevent_mask;
+      gint i;
+
+      /* Device is a pointer */
+      /*if (!cursor)
+        xcursor = None;
+      else
+        {
+          _gdk_x11_cursor_update_theme (cursor);
+          xcursor = gdk_x11_cursor_get_xcursor (cursor);
+        }*/
+
+      xevent_mask = 0;
+
+      for (i = 0; i < _gdk_gix_event_mask_table_size; i++)
+        {
+          if (event_mask & (1 << (i + 1)))
+            xevent_mask |= _gdk_gix_event_mask_table[i];
+        }
+
+      /* We don't want to set a native motion hint mask, as we're emulating motion
+       * hints. If we set a native one we just wouldn't get any events.
+       */
+      //xevent_mask &= ~PointerMotionHintMask;
+
+      status = gi_grab_pointer (xwindow,
+							 TRUE,
+                             0, 
+                             owner_events,                             
+                             xcursor,
+                             GI_BUTTON_L|GI_BUTTON_R|GI_BUTTON_M);
+    }
+
+  //_gdk_x11_display_update_grab_info (display, device, status);
+  //return _gdk_x11_convert_grab_status (status);
+
   return GDK_GRAB_SUCCESS;
 }
 
@@ -203,6 +319,18 @@ static void
 gdk_device_core_ungrab (GdkDevice *device,
                         guint32    time_)
 {
+  GdkDisplay *display;
+  //gulong serial;
+
+  display = gdk_device_get_display (device);
+  //serial = NextRequest (GDK_DISPLAY_XDISPLAY (display));
+
+  if (gdk_device_get_source (device) == GDK_SOURCE_KEYBOARD)
+    gi_ungrab_keyboard ();
+  else
+    gi_ungrab_pointer ();
+
+  //_gdk_x11_display_update_grab_info_ungrab (display, device, time_, serial);
 }
 
 static void
@@ -239,21 +367,6 @@ gdk_device_core_init (GdkDeviceCore *device_core)
   _gdk_device_add_axis (device, GDK_NONE, GDK_AXIS_X, 0, 0, 1);
   _gdk_device_add_axis (device, GDK_NONE, GDK_AXIS_Y, 0, 0, 1);
 }
-
-/*
-void *
-_gdk_gix_device_get_device (GdkDevice *device)
-{
-  return GDK_DEVICE_CORE (device)->device->device;
-}
-
-
-static void
-free_device (void *data, void *user_data)
-{
-  g_object_unref (data);
-}
-*/
 
 /***********************************************************/
 static void

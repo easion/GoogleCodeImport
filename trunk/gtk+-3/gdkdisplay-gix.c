@@ -82,137 +82,6 @@ _gdk_input_init (GdkDisplay *display)
   
 }
 
-/*
-static void
-shell_handle_configure(void *data, struct wl_shell *shell,
-		       uint32_t time, uint32_t edges,
-		       struct wl_surface *surface,
-		       int32_t width, int32_t height)
-{
-  GdkWindow *window;
-  GdkDisplay *display;
-  GdkEvent *event;
-
-  window = wl_surface_get_user_data(surface);
-
-  display = gdk_window_get_display (window);
-
-  event = gdk_event_new (GDK_CONFIGURE);
-  event->configure.window = window;
-  event->configure.send_event = FALSE;
-  event->configure.width = width;
-  event->configure.height = height;
-
-  _gdk_window_update_size (window);
-  _gdk_gix_window_update_size (window, width, height, edges);
-
-  g_object_ref(window);
-
-  _gdk_gix_display_deliver_event (display, event);
-}
-
-static const struct wl_shell_listener shell_listener = {
-  shell_handle_configure,
-};
-
-static void
-output_handle_geometry(void *data,
-		       struct wl_output *output,
-		       int32_t x, int32_t y, int32_t width, int32_t height)
-{
-    g_signal_emit_by_name (screen, "monitors-changed");
-    g_signal_emit_by_name (screen, "size-changed");
-}
-static const struct wl_output_listener output_listener = {
-	output_handle_geometry,
-};*/
-
-static void
-gdk_display_handle_global(void *display, uint32_t id,
-			  const char *interface, uint32_t version, void *data)
-{
-  GdkDisplayGix *display_gix = data;
-  GdkDisplay *gdk_display = GDK_DISPLAY_OBJECT (data);
-  void  *input;
-
-  if (strcmp(interface, "compositor") == 0) {
-    //display_gix->compositor = wl_compositor_create(display, id);
-  } else if (strcmp(interface, "shm") == 0) {
-    //display_gix->shm = wl_shm_create(display, id);
-  } else if (strcmp(interface, "shell") == 0) {
-    //display_gix->shell = wl_shell_create(display, id);
-    //wl_shell_add_listener(display_gix->shell,
-	//		  &shell_listener, display_gix);
-  } else if (strcmp(interface, "output") == 0) {
-    //display_gix->output = wl_output_create(display, id);
-    //wl_output_add_listener(display_gix->output,
-	//		   &output_listener, display_gix);
-  } else if (strcmp(interface, "input_device") == 0) {
-   // input = wl_input_device_create(display, id);
-    //_gdk_gix_device_manager_add_device (gdk_display->device_manager,
-	//				    input);
-  }
-}
-
-/*
-static gboolean
-gdk_display_init_egl(GdkDisplay *display)
-{
-  GdkDisplayGix *display_gix = GDK_DISPLAY_GIX (display);
-  EGLint major, minor, i;
-  void *p;
-
-  static const struct { const char *f; unsigned int offset; }
-  extension_functions[] = {
-    { "glEGLImageTargetTexture2DOES", offsetof(GdkDisplayGix, image_target_texture_2d) },
-    { "eglCreateImageKHR", offsetof(GdkDisplayGix, create_image) },
-    { "eglDestroyImageKHR", offsetof(GdkDisplayGix, destroy_image) }
-  };
-
-  display_gix->egl_display =
-    eglGetDisplay(display_gix->native_display);
-  if (!eglInitialize(display_gix->egl_display, &major, &minor)) {
-    fprintf(stderr, "failed to initialize display\n");
-    return FALSE;
-  }
-
-  eglBindAPI(EGL_OPENGL_API);
-
-  display_gix->egl_context =
-    eglCreateContext(display_gix->egl_display, NULL, EGL_NO_CONTEXT, NULL);
-  if (display_gix->egl_context == NULL) {
-    fprintf(stderr, "failed to create context\n");
-    return FALSE;
-  }
-
-  if (!eglMakeCurrent(display_gix->egl_display,
-		      NULL, NULL, display_gix->egl_context)) {
-    fprintf(stderr, "faile to make context current\n");
-    return FALSE;
-  }
-
-  display_gix->cairo_device =
-    cairo_egl_device_create(display_gix->egl_display,
-			    display_gix->egl_context);
-  if (cairo_device_status (display_gix->cairo_device) != CAIRO_STATUS_SUCCESS) {
-    fprintf(stderr, "failed to get cairo drm device\n");
-    return FALSE;
-  }
-
-  for (i = 0; i < G_N_ELEMENTS(extension_functions); i++) {
-    p = eglGetProcAddress(extension_functions[i].f);
-    *(void **) ((char *) display_gix + extension_functions[i].offset) = p;
-    if (p == NULL) {
-      fprintf(stderr, "failed to look up %s\n", extension_functions[i].f);
-      return FALSE;
-    }
-  }
-
-  return TRUE;
-}
-*/
-
-
 
 GdkDeviceManager *
 _gdk_gix_device_manager_new (GdkDisplay *display)
@@ -244,7 +113,7 @@ _gdk_gix_display_open (const gchar *display_name)
       return NULL;
     }
 
-  g_print("_gdk_gix_display_open %s\n", display_name?display_name:"NULL");
+  //g_print("_gdk_gix_display_open %s\n", display_name?display_name:"NULL");
 
   _gdk_display =  g_object_new (GDK_TYPE_DISPLAY_GIX, NULL);
    _gdk_screen = g_object_new (GDK_TYPE_SCREEN_GIX, NULL);
@@ -293,9 +162,6 @@ gdk_gix_display_dispose (GObject *object)
       g_source_unref (display_gix->event_source);
       display_gix->event_source = NULL;
     }
-
-  //eglTerminate(display_gix->egl_display);
-  //wl_egl_display_destroy(display_gix->native_display);
 
   gi_exit();
 

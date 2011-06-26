@@ -41,7 +41,7 @@ _gdk_input_init (GdkDisplay *display)
   display_gix = GDK_DISPLAY_GIX (display);
  
   //gdk_display_get_device_manager (display);
-  gix_device_manager = g_object_new (GDK_TYPE_DEVICE_MANAGER_CORE,
+  gix_device_manager = g_object_new (GDK_TYPE_DEVICE_MANAGER_GIX,
                        "display", display,
                        NULL);
   //display->device_manager =device_manager;
@@ -86,7 +86,7 @@ _gdk_input_init (GdkDisplay *display)
 GdkDeviceManager *
 _gdk_gix_device_manager_new (GdkDisplay *display)
 {
-  return g_object_new (GDK_TYPE_DEVICE_MANAGER_CORE,
+  return g_object_new (GDK_TYPE_DEVICE_MANAGER_GIX,
                        "display", display,
                        NULL);
 }
@@ -129,7 +129,7 @@ _gdk_gix_display_open (const gchar *display_name)
   display_gix->event_source = _gdk_gix_display_event_source_new (_gdk_display);
 
   _gdk_visual_init ();
-   _gdk_windowing_window_init (_gdk_display,_gdk_screen);
+  _gdk_windowing_window_init (_gdk_display,_gdk_screen);
 
 
   _gdk_input_init (_gdk_display);
@@ -380,7 +380,7 @@ gdk_gix_display_broadcast_startup_message (GdkDisplay *display,
     }
   va_end (ap);
 
-  printf ("startup message: %s\n", message->str);
+  //printf ("startup message: %s\n", message->str);
 
   g_string_free (message, TRUE);
 }

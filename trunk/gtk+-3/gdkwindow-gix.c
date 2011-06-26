@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-//#define USE_CAIRO_IMAGE_SURFACE 1
 
 #define WINDOW_IS_TOPLEVEL_OR_FOREIGN(window) \
   (GDK_WINDOW_TYPE (window) != GDK_WINDOW_CHILD &&   \
@@ -78,7 +77,7 @@ gdk_xid_equal (gi_window_id_t *a, gi_window_id_t *b)
   return (*a == *b);
 }
 
-void
+static void
 _gdk_gix_display_add_window (GdkDisplay *display,
                              gi_window_id_t        *xid,
                              GdkWindow  *data)
@@ -100,7 +99,7 @@ _gdk_gix_display_add_window (GdkDisplay *display,
   g_hash_table_insert (display_gix->xid_ht, xid, data);
 }
 
-void
+static void
 _gdk_gix_display_remove_window (GdkDisplay *display,
                                 gi_window_id_t         xid)
 {
@@ -122,6 +121,7 @@ gdk_gix_window_lookup_for_display (GdkDisplay *display,
   GdkWindow *data = NULL;
 
   g_return_val_if_fail (GDK_IS_DISPLAY (display), NULL);
+  g_return_val_if_fail (display == _gdk_display, NULL);
 
   display_gix = GDK_DISPLAY_GIX (display);
 
@@ -441,10 +441,7 @@ static const cairo_user_data_key_t gdk_gix_cairo_key;
 typedef struct _GdkGixCairoSurfaceData {  
   GdkDisplayGix *display;
   int32_t width, height;
-#ifdef USE_CAIRO_IMAGE_SURFACE 
-  gi_image_t *gix_image;
-  gi_gc_ptr_t gix_gc;
-#endif
+
 } GdkGixCairoSurfaceData;
 
 
@@ -482,20 +479,9 @@ gdk_gix_create_cairo_surface (GdkDisplayGix *display,
   data->display = display;
   data->width = width;
   data->height = height;
-#ifdef USE_CAIRO_IMAGE_SURFACE 
-	if (1)
-	{
-	surface = cairo_image_surface_create(CAIRO_FORMAT_RGB16_565,width,height);
-	//cairo_image_surface_create_for_data();
-	data->gix_image = gi_create_image_with_param(
-		width,height,GI_RENDER_r5g6b5, 
-		cairo_image_surface_get_data(surface),
-		cairo_image_surface_get_stride(surface));
-	data->gix_gc = gi_create_gc(window_id,NULL);
-	}
-#else
+
   surface = cairo_gix_surface_create(window_id);
-#endif
+
   if (cairo_surface_status (surface) != CAIRO_STATUS_SUCCESS)
     fprintf (stderr, "create gix surface failed\n");
 
@@ -513,6 +499,7 @@ gdk_gix_window_ref_cairo_surface (GdkWindow *window)
   GdkDisplayGix *display_gix =
     GDK_DISPLAY_GIX (gdk_window_get_display (impl->wrapper));
 
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (impl->wrapper))
     return NULL;
 
@@ -535,6 +522,10 @@ gdk_gix_window_ref_cairo_surface (GdkWindow *window)
 static void
 gdk_gix_window_set_user_time (GdkWindow *window, guint32 user_time)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  if (window->destroyed)
+    return;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
@@ -544,6 +535,7 @@ gdk_gix_window_show (GdkWindow *window, gboolean already_mapped)
   GdkDisplayGix *display_gix;
   GdkWindowImplGix *impl = GDK_WINDOW_IMPL_GIX (window->impl);
 
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (window->destroyed)
     return;
 
@@ -571,6 +563,7 @@ gdk_gix_window_hide (GdkWindow *window)
 {
   GdkWindowImplGix *impl = GDK_WINDOW_IMPL_GIX (window->impl);
 
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (window->destroyed)
     return;
 
@@ -580,7 +573,7 @@ gdk_gix_window_hide (GdkWindow *window)
       //impl->mapped = FALSE;
     }
 
-  //_gdk_window_clear_update_area (window);
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
@@ -588,8 +581,10 @@ gdk_window_gix_withdraw (GdkWindow *window)
 {
   GdkWindowImplGix *impl;
 
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (window->destroyed)
     return;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 
   //GDK_NOTE (MISC, g_print ("gdk_window_gix_withdraw: %p\n",
 	//		   GDK_WINDOW_WIN_ID (impl));
@@ -605,6 +600,7 @@ gdk_window_gix_set_events (GdkWindow    *window,
   long xevent_mask = 0;
    GdkDisplayGix *display_gix;
  
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window))
 	  return;
 
@@ -624,6 +620,7 @@ gdk_window_gix_set_events (GdkWindow    *window,
 static GdkEventMask
 gdk_window_gix_get_events (GdkWindow *window)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window))
     return 0;
   else
@@ -647,6 +644,7 @@ static void
 gdk_window_gix_restack_under (GdkWindow *window,
 			      GList *native_siblings)
 {
+	// ### TODO
 }
 
 static void
@@ -654,6 +652,7 @@ gdk_window_gix_restack_toplevel (GdkWindow *window,
 				 GdkWindow *sibling,
 				 gboolean   above)
 {
+	// ### TODO
 }
 
 static void
@@ -682,6 +681,8 @@ static void
 gdk_window_gix_set_background (GdkWindow      *window,
 			       cairo_pattern_t *pattern)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static gboolean
@@ -730,7 +731,7 @@ gdk_window_gix_reparent (GdkWindow *window,
 	}
     }
 
-  //_gdk_gix_display_remove_window (GDK_WINDOW_DISPLAY (window), impl->window_id);
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
   return FALSE;
 }
 
@@ -742,6 +743,7 @@ gdk_window_gix_set_device_cursor (GdkWindow *window,
   g_return_if_fail (GDK_IS_WINDOW (window));
   g_return_if_fail (GDK_IS_DEVICE (device));
 
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (!GDK_WINDOW_DESTROYED (window))
     GDK_DEVICE_GET_CLASS (device)->set_window_cursor (device, window, cursor);
 }
@@ -755,6 +757,7 @@ gdk_window_gix_get_geometry (GdkWindow *window,
 {
   gi_window_info_t info;
 
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (!GDK_WINDOW_DESTROYED (window))
     {
 	  gi_get_window_info(GDK_WINDOW_XID (window), &info);
@@ -821,6 +824,8 @@ gdk_window_gix_shape_combine_region (GdkWindow       *window,
 					 gint             offset_x,
 					 gint             offset_y)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void 
@@ -829,6 +834,8 @@ gdk_window_gix_input_shape_combine_region (GdkWindow       *window,
 					       gint             offset_x,
 					       gint             offset_y)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static gboolean
@@ -838,15 +845,24 @@ gdk_window_gix_set_static_gravities (GdkWindow *window,
   g_return_val_if_fail (GDK_IS_WINDOW (window), FALSE);
 
   return !use_static;
-  //return TRUE;
 }
 
 static gboolean
 gdk_gix_window_queue_antiexpose (GdkWindow *window,
 				     cairo_region_t *area)
 {
-	//FIXME
-  return FALSE;
+  g_return_val_if_fail (GDK_IS_WINDOW (window), FALSE);
+#if 0
+  GdkWindowQueueItem *item = g_new (GdkWindowQueueItem, 1);
+  item->type = GDK_WINDOW_QUEUE_ANTIEXPOSE;
+  item->u.antiexpose.area = area;
+
+  gdk_window_queue (window, item);
+
+  return TRUE;
+#endif
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
+  //return FALSE;
 }
 
 static void
@@ -888,8 +904,8 @@ gdk_gix_window_destroy (GdkWindow *window,
 				   NULL, NULL);
     }
 
-  //if (impl->texture)
-  //  glDeleteTextures(1, &impl->texture);
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
+
 
   if (!recursing && !foreign_destroy)
     {
@@ -906,6 +922,7 @@ gdk_window_gix_destroy_foreign (GdkWindow *window)
   gdk_window_reparent (window, NULL, 0, 0);
 
   gi_post_quit_message(GDK_WINDOW_XID (window));
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
   
   //PostMessage (GDK_WINDOW_HWND (window), WM_CLOSE, 0, 0);
 }
@@ -926,12 +943,14 @@ gdk_window_gix_resize_cairo_surface (GdkWindow       *window,
 static cairo_region_t *
 gdk_gix_window_get_shape (GdkWindow *window)
 {
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
   return NULL;
 }
 
 static cairo_region_t *
 gdk_gix_window_get_input_shape (GdkWindow *window)
 {
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
   return NULL;
 }
 
@@ -939,8 +958,12 @@ static void
 gdk_gix_window_focus (GdkWindow *window,
 			  guint32    timestamp)
 {
-	gi_raise_window ( GDK_WINDOW_XID (window));
-	gi_set_focus_window ( GDK_WINDOW_XID (window));
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  if (GDK_WINDOW_DESTROYED (window))
+    return;
+
+  gi_raise_window ( GDK_WINDOW_XID (window));
+  gi_set_focus_window ( GDK_WINDOW_XID (window));
   /* FIXME: wl_shell_focus() */
 }
 
@@ -949,6 +972,7 @@ gdk_gix_window_set_type_hint (GdkWindow        *window,
 				  GdkWindowTypeHint hint)
 {
   GdkWindowImplGix *impl;
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window))
     return;
 
@@ -985,6 +1009,7 @@ gdk_gix_window_get_type_hint (GdkWindow *window)
 {
   GdkWindowImplGix *impl;
 
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window) ||
       !WINDOW_IS_TOPLEVEL (window))
     return GDK_WINDOW_TYPE_HINT_NORMAL;
@@ -998,24 +1023,40 @@ void
 gdk_gix_window_set_modal_hint (GdkWindow *window,
 				   gboolean   modal)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  if (GDK_WINDOW_DESTROYED (window))
+    return;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
 gdk_gix_window_set_skip_taskbar_hint (GdkWindow *window,
 					  gboolean   skips_taskbar)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  if (GDK_WINDOW_DESTROYED (window))
+    return;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
 gdk_gix_window_set_skip_pager_hint (GdkWindow *window,
 					gboolean   skips_pager)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  if (GDK_WINDOW_DESTROYED (window))
+    return;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
 gdk_gix_window_set_urgency_hint (GdkWindow *window,
 				     gboolean   urgent)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  if (GDK_WINDOW_DESTROYED (window))
+    return;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
@@ -1023,6 +1064,7 @@ gdk_gix_window_set_geometry_hints (GdkWindow         *window,
 				       const GdkGeometry *geometry,
 				       GdkWindowHints     geom_mask)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window) ||
       !WINDOW_IS_TOPLEVEL_OR_FOREIGN (window))
     return;
@@ -1087,6 +1129,7 @@ gdk_gix_window_set_geometry_hints (GdkWindow         *window,
     {
       /* FIXME: Implement */
     }
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
@@ -1094,11 +1137,12 @@ gdk_gix_window_set_title (GdkWindow   *window,
 			      const gchar *title)
 {
   g_return_if_fail (title != NULL);
+  g_return_if_fail (GDK_IS_WINDOW (window));
 
   if (GDK_WINDOW_DESTROYED (window))
     return;
 
-  g_print("gdk_gix_window_set_title called(%s)", title);
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 
   gi_set_window_utf8_caption(GDK_WINDOW_XID (window), title);
 }
@@ -1107,25 +1151,29 @@ static void
 gdk_gix_window_set_role (GdkWindow   *window,
 			     const gchar *role)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window) ||
       WINDOW_IS_TOPLEVEL (window))
     return;
 
   /* FIXME: Implement */
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
 gdk_gix_window_set_startup_id (GdkWindow   *window,
 				   const gchar *startup_id)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  if (GDK_WINDOW_DESTROYED (window))
+    return;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
 gdk_gix_window_set_transient_for (GdkWindow *window,
 				      GdkWindow *parent)
 {
-  //GdkWindowImplGix *impl;
-  //FIXME
   gi_window_id_t window_id, parent_id;
   GdkWindowImplGix *window_impl = GDK_WINDOW_IMPL_GIX (window->impl);
   GdkWindowImplGix *parent_impl = NULL;
@@ -1162,8 +1210,8 @@ gdk_gix_window_set_transient_for (GdkWindow *window,
   }
   else{
     window_impl->transient_for = parent;
-	g_print("%s: got line %d\n",__FUNCTION__,__LINE__);
   }
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 
 }
 
@@ -1191,14 +1239,8 @@ static void
 gdk_gix_window_get_frame_extents (GdkWindow    *window,
 				      GdkRectangle *rect)
 {
-  //rect->x = window->x;
-  //rect->y = window->y;
-  //rect->width = window->width;
-  //rect->height = window->height;
-
   gi_window_id_t hwnd;
   gi_window_info_t info;
-  //RECT r;
   int err;
 
   g_return_if_fail (GDK_IS_WINDOW (window));
@@ -1240,8 +1282,9 @@ gdk_gix_window_set_override_redirect (GdkWindow *window,
 					  gboolean override_redirect)
 {
   g_return_if_fail (GDK_IS_WINDOW (window));
-
-  g_warning ("gdk_window_set_override_redirect not implemented");
+  if (GDK_WINDOW_DESTROYED (window))
+    return;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
@@ -1284,7 +1327,10 @@ gdk_gix_window_set_icon_list (GdkWindow *window,
   GdkDisplay *display;
   gint n;
   GdkPixbuf *pixbuf_small = NULL;
-  
+
+   g_return_if_fail (GDK_IS_WINDOW (window));
+ 
+
   if (GDK_WINDOW_DESTROYED (window) ||
       !WINDOW_IS_TOPLEVEL_OR_FOREIGN (window))
     return;
@@ -1390,22 +1436,33 @@ static void
 gdk_gix_window_set_icon_name (GdkWindow   *window,
 				  const gchar *name)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window))
     return;
+  
+
+  //gi_set_window_caption();
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
 gdk_gix_window_iconify (GdkWindow *window)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window))
     return;
 
+  if (GDK_WINDOW_IS_MAPPED (window))
 	gi_iconify_window(GDK_WINDOW_XID(window));
+  else{
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
+  }
 }
 
 static void
 gdk_gix_window_deiconify (GdkWindow *window)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window) ||
       !WINDOW_IS_TOPLEVEL_OR_FOREIGN (window))
     return;
@@ -1424,20 +1481,28 @@ gdk_gix_window_deiconify (GdkWindow *window)
 static void
 gdk_gix_window_stick (GdkWindow *window)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window))
     return;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
 gdk_gix_window_unstick (GdkWindow *window)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window))
     return;
+
+  if (GDK_WINDOW_DESTROYED (window))
+    return;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
 gdk_gix_window_maximize (GdkWindow *window)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window))
     return;
   gi_wm_window_maximize(GDK_WINDOW_XID(window), TRUE);
@@ -1446,6 +1511,7 @@ gdk_gix_window_maximize (GdkWindow *window)
 static void
 gdk_gix_window_unmaximize (GdkWindow *window)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window))
     return;
   gi_wm_window_maximize(GDK_WINDOW_XID(window), FALSE);
@@ -1454,6 +1520,7 @@ gdk_gix_window_unmaximize (GdkWindow *window)
 static void
 gdk_gix_window_fullscreen (GdkWindow *window)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window))
     return;
   gi_fullscreen_window(GDK_WINDOW_XID(window), TRUE);
@@ -1462,6 +1529,7 @@ gdk_gix_window_fullscreen (GdkWindow *window)
 static void
 gdk_gix_window_unfullscreen (GdkWindow *window)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window))
     return;
   gi_fullscreen_window(GDK_WINDOW_XID(window), FALSE);
@@ -1492,6 +1560,7 @@ gdk_gix_window_set_keep_below (GdkWindow *window, gboolean setting)
 static GdkWindow *
 gdk_gix_window_get_group (GdkWindow *window)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window) ||
       !WINDOW_IS_TOPLEVEL (window))
     return NULL;
@@ -1506,12 +1575,18 @@ gdk_gix_window_set_group (GdkWindow *window,
   g_return_if_fail (GDK_IS_WINDOW (window));
   g_return_if_fail (GDK_WINDOW_TYPE (window) != GDK_WINDOW_CHILD);
   g_return_if_fail (leader == NULL || GDK_IS_WINDOW (leader));
+
+  if (GDK_WINDOW_DESTROYED (window) || GDK_WINDOW_DESTROYED (leader))
+    return;
+  
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
 gdk_gix_window_set_decorations (GdkWindow      *window,
 				    GdkWMDecoration decorations)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
 	g_print("gdk_gix_window_set_decorations called\n");
 
 	GDK_NOTE (MISC, g_print ("gdk_window_set_decorations: %p: %s %s%s%s%s%s%s\n",
@@ -1522,7 +1597,11 @@ gdk_gix_window_set_decorations (GdkWindow      *window,
 			   (decorations & GDK_DECOR_TITLE ? "TITLE " : ""),
 			   (decorations & GDK_DECOR_MENU ? "MENU " : ""),
 			   (decorations & GDK_DECOR_MINIMIZE ? "MINIMIZE " : ""),
-			   (decorations & GDK_DECOR_MAXIMIZE ? "MAXIMIZE " : "")));
+
+	decorations_copy = g_malloc (sizeof (GdkWMDecoration));
+	*decorations_copy = decorations;
+	g_object_set_qdata_full (G_OBJECT (window), get_decorations_quark (), decorations_copy, g_free);
+	(decorations & GDK_DECOR_MAXIMIZE ? "MAXIMIZE " : "")));
 
 /*
  
@@ -1532,6 +1611,7 @@ gdk_gix_window_set_decorations (GdkWindow      *window,
   
   gdk_window_set_mwm_hints (window, &hints);
   */
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 
 }
 
@@ -1539,13 +1619,53 @@ static gboolean
 gdk_gix_window_get_decorations (GdkWindow       *window,
 				    GdkWMDecoration *decorations)
 {
-  return FALSE;
+  GdkWMDecoration* decorations_set;
+  
+  g_return_val_if_fail (GDK_IS_WINDOW (window), FALSE);
+
+  decorations_set = g_object_get_qdata (G_OBJECT (window), get_decorations_quark ());
+  if (decorations_set)
+    *decorations = *decorations_set;
+
+  return (decorations_set != NULL);
 }
 
 static void
 gdk_gix_window_set_functions (GdkWindow    *window,
 				  GdkWMFunction functions)
 {
+  GdkWMFunction* functions_copy;
+
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  
+  GDK_NOTE (MISC, g_print ("gdk_window_set_functions: %p: %s %s%s%s%s%s\n",
+			   GDK_WINDOW_HWND (window),
+			   (functions & GDK_FUNC_ALL ? "clearing" : "setting"),
+			   (functions & GDK_FUNC_RESIZE ? "RESIZE " : ""),
+			   (functions & GDK_FUNC_MOVE ? "MOVE " : ""),
+			   (functions & GDK_FUNC_MINIMIZE ? "MINIMIZE " : ""),
+			   (functions & GDK_FUNC_MAXIMIZE ? "MAXIMIZE " : ""),
+			   (functions & GDK_FUNC_CLOSE ? "CLOSE " : "")));
+
+  functions_copy = g_malloc (sizeof (GdkWMFunction));
+  *functions_copy = functions;
+  g_object_set_qdata_full (G_OBJECT (window), get_functions_quark (), functions_copy, g_free);
+
+  //update_system_menu (window);
+}
+
+
+gboolean
+_gdk_window_get_functions (GdkWindow     *window,
+		           GdkWMFunction *functions)
+{
+  GdkWMDecoration* functions_set;
+  
+  functions_set = g_object_get_qdata (G_OBJECT (window), get_functions_quark ());
+  if (functions_set)
+    *functions = *functions_set;
+
+  return (functions_set != NULL);
 }
 
 static void
@@ -1561,6 +1681,7 @@ gdk_gix_window_begin_resize_drag (GdkWindow     *window,
   GdkWindowImplGix *impl;
   GdkDevice *device;
   uint32_t grab_type;
+  g_return_if_fail (GDK_IS_WINDOW (window));
 
   if (GDK_WINDOW_DESTROYED (window) ||
       !WINDOW_IS_TOPLEVEL_OR_FOREIGN (window))
@@ -1609,6 +1730,7 @@ gdk_gix_window_begin_resize_drag (GdkWindow     *window,
   impl = GDK_WINDOW_IMPL_GIX (window->impl);
   dm = gdk_display_get_device_manager (display);
   device = gdk_device_manager_get_client_pointer (dm);
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 
   //wl_shell_resize(GDK_DISPLAY_GIX (display)->shell, impl->window_id,
 	//	  _gdk_gix_device_get_device (device),
@@ -1622,29 +1744,37 @@ gdk_gix_window_begin_move_drag (GdkWindow *window,
 				    gint       root_y,
 				    guint32    timestamp)
 {
-  GdkDisplay *display = gdk_window_get_display (window);
-  GdkDeviceManager *dm;
-  GdkWindowImplGix *impl;
-  GdkDevice *device;
-
-  if (GDK_WINDOW_DESTROYED (window) ||
-      !WINDOW_IS_TOPLEVEL (window))
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  
+  if (GDK_WINDOW_DESTROYED (window))
     return;
 
-  impl = GDK_WINDOW_IMPL_GIX (window->impl);
+  /* Tell Windows to start interactively moving the window by pretending that
+   * the left pointer button was clicked in the titlebar. This will only work
+   * if the button is down when this function is called, and will only work
+   * with button 1 (left), since Windows only allows window dragging using the
+   * left mouse button.
+   */
+  if (button != 1)
+    return;
+  
+  /* Must break the automatic grab that occured when the button was pressed,
+   * otherwise it won't work.
+   */
+  gdk_display_pointer_ungrab (_gdk_display, 0);
 
-  dm = gdk_display_get_device_manager (display);
-  device = gdk_device_manager_get_client_pointer (dm);
-
-  //FIXME
-
-  //wl_shell_move(GDK_DISPLAY_GIX (display)->shell, impl->window_id,
-	//	_gdk_gix_device_get_device (device), timestamp);
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
+  //DefWindowProcW (GDK_WINDOW_HWND (window), WM_NCLBUTTONDOWN, HTCAPTION,
+	//	  MAKELPARAM (root_x - _gdk_offset_x, root_y - _gdk_offset_y));
 }
 
 static void
 gdk_gix_window_enable_synchronized_configure (GdkWindow *window)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  if (GDK_WINDOW_DESTROYED (window))
+    return ;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
@@ -1655,12 +1785,18 @@ gdk_gix_window_configure_finished (GdkWindow *window)
 
   if (!GDK_IS_WINDOW_IMPL_GIX (window->impl))
     return;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
 gdk_gix_window_set_opacity (GdkWindow *window,
 				gdouble    opacity)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  if (GDK_WINDOW_DESTROYED (window))
+    return ;
+
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 	//gi_set_window_opacity()
 }
 
@@ -1668,6 +1804,10 @@ static void
 gdk_gix_window_set_composited (GdkWindow *window,
 				   gboolean   composited)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  if (GDK_WINDOW_DESTROYED (window))
+    return ;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
@@ -1690,50 +1830,21 @@ static void
 gdk_gix_window_process_updates_recurse (GdkWindow *window,
 					    cairo_region_t *region)
 {
-#ifdef USE_CAIRO_IMAGE_SURFACE 
-  GdkWindowImplGix *impl = GDK_WINDOW_IMPL_GIX (window->impl);
-  cairo_rectangle_int_t rect;
-  int i, n, err;
-  GdkGixCairoSurfaceData *data;
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  if (GDK_WINDOW_DESTROYED (window))
+    return ;
 
-  //impl->server_surface = cairo_surface_reference (impl->cairo_surface);
-  data = cairo_surface_get_user_data (impl->cairo_surface,
-				      &gdk_gix_cairo_key);
-
-  if (!data)
-  {
-	  g_print("cairo_surface_get_user_data failed\n");
-  }
-
-  if (impl->cairo_surface){
-    //gdk_gix_window_attach_image (window);
-  }
-
-  //gdk_gix_window_map (window);
-
-  n = cairo_region_num_rectangles(region);
-	err = gi_gc_attch_window(data->gix_gc,GDK_WINDOW_XID(window));
-  g_print("gdk_gix_window_process_updates_recurse called(%d)\n",n, err);
-
-  for (i = 0; i < n; i++)
-    {
-      cairo_region_get_rectangle (region, i, &rect);
-	  gi_bitblt_image(data->gix_gc, 
-		  rect.x, rect.y, rect.width, rect.height,
-		  data->gix_image,rect.x, rect.y);
-      //gi_window_expose (impl->window_id,
-		//	 rect.x, rect.y, rect.width, rect.height);
-    }
-
-
-	//err=gi_draw_image(data->gix_gc,data->gix_image,0,0);
-#endif
   _gdk_window_process_updates_recurse (window, region);
 }
 
 static void
 gdk_gix_window_sync_rendering (GdkWindow *window)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  if (GDK_WINDOW_DESTROYED (window))
+    return ;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
+  return ;
 }
 
 static gboolean
@@ -1744,6 +1855,10 @@ gdk_gix_window_simulate_key (GdkWindow      *window,
 				 GdkModifierType modifiers,
 				 GdkEventType    key_pressrelease)
 {
+  g_return_val_if_fail (GDK_IS_WINDOW (window),FALSE);
+  if (GDK_WINDOW_DESTROYED (window))
+    return FALSE;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
   return FALSE;
 }
 
@@ -1755,6 +1870,10 @@ gdk_gix_window_simulate_button (GdkWindow      *window,
 				    GdkModifierType modifiers,
 				    GdkEventType    button_pressrelease)
 {
+  g_return_val_if_fail (GDK_IS_WINDOW (window),FALSE);
+  if (GDK_WINDOW_DESTROYED (window))
+    return FALSE;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
   return FALSE;
 }
 
@@ -1770,6 +1889,10 @@ gdk_gix_window_get_property (GdkWindow   *window,
 				 gint        *actual_length,
 				 guchar     **data)
 {
+  g_return_val_if_fail (GDK_IS_WINDOW (window),FALSE);
+  if (GDK_WINDOW_DESTROYED (window))
+    return FALSE;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
   return FALSE;
 }
 
@@ -1782,12 +1905,21 @@ gdk_gix_window_change_property (GdkWindow    *window,
 				    const guchar *data,
 				    gint          nelements)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  if (GDK_WINDOW_DESTROYED (window))
+    return ;
+
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void
 gdk_gix_window_delete_property (GdkWindow *window,
 				    GdkAtom    property)
 {
+  g_return_if_fail (GDK_IS_WINDOW (window));
+  if (GDK_WINDOW_DESTROYED (window))
+    return ;
+  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
 static void

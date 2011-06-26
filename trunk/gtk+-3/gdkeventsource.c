@@ -161,7 +161,7 @@ fixup_event (GdkEvent *event)
 }
 
 static void
-append_event (GdkEvent *event)
+append_event (GdkEvent *event, gboolean  windowing)
 {
   GList *link;
   
@@ -170,6 +170,7 @@ append_event (GdkEvent *event)
   link = _gdk_event_queue_append (gdk_display_get_default (), event);
 
   /* event morphing, the passed in may not be valid afterwards */
+  if(windowing)
   _gdk_windowing_got_event (gdk_display_get_default (), link, event, 0);
 #else
   _gdk_event_queue_append (gdk_display_get_default (), event);
@@ -197,9 +198,9 @@ _gdk_gix_display_queue_events (GdkDisplay *display)
       return FALSE;
     }
     event = gdk_event_translate (display, source, &xevent, TRUE);
-      if (event){
-      append_event(event);         
-      }
+    if (event){
+      append_event(event,TRUE);         
+    }
   } 
 }
 
@@ -213,7 +214,7 @@ generate_focus_event (GdkDeviceManager *device_manager,
   GdkDevice *device;
   GdkEvent *event;
 
-  device = GDK_DEVICE_MANAGER_CORE (device_manager)->core_keyboard;
+  device = GDK_DEVICE_MANAGER_GIX (device_manager)->core_keyboard;
 
   event = gdk_event_new (GDK_FOCUS_CHANGE);
   event->focus_change.window = window;
@@ -223,13 +224,38 @@ generate_focus_event (GdkDeviceManager *device_manager,
 }
 
 
+static void
+generate_grab_broken_event (GdkDeviceManager *device_manager,
+                            GdkWindow        *window,
+                            gboolean          keyboard,
+                            GdkWindow        *grab_window)
+{
+  GdkEvent *event = gdk_event_new (GDK_GRAB_BROKEN);
+  GdkDevice *device;
+
+  if (keyboard)
+    device = GDK_DEVICE_MANAGER_GIX (device_manager)->core_keyboard;
+  else
+    device = GDK_DEVICE_MANAGER_GIX (device_manager)->core_pointer;
+
+  event->grab_broken.window = window;
+  event->grab_broken.send_event = 0;
+  event->grab_broken.keyboard = keyboard;
+  event->grab_broken.implicit = FALSE;
+  event->grab_broken.grab_window = grab_window;
+  gdk_event_set_device (event, device);
+
+  append_event (event,FALSE);
+}
+
+
 static GdkEvent *
 generate_configure_event (gi_msg_t       *msg,
       GdkWindow *window)
 {
 
   if (msg->params[0] != GI_STRUCT_CHANGE_RESIZE
-  && msg->params[0] != GI_STRUCT_CHANGE_MOVE )
+    && msg->params[0] != GI_STRUCT_CHANGE_MOVE )
   {
     return NULL;
   }
@@ -244,16 +270,14 @@ generate_configure_event (gi_msg_t       *msg,
 
   if (window->event_mask & GDK_STRUCTURE_MASK)
   {
-    GdkEvent *event = gdk_event_new (GDK_CONFIGURE);
+    GdkEvent *event = gdk_event_new (GDK_CONFIGURE);	
 
     event->configure.window = window;
-
     event->configure.width = msg->body.rect.w;
     event->configure.height = msg->body.rect.h;
 
     event->configure.x = msg->body.rect.x;
     event->configure.y = msg->body.rect.y;
-
     return (event);
   }
 
@@ -268,8 +292,9 @@ static gint
 build_pointer_event_state (unsigned button_flags, unsigned key_flags)
 {
   gint state;
+  gint ks;
   
-  state = 0;
+  ks = state = 0;
 
   if   (button_flags & GI_BUTTON_L)
     state |= GDK_BUTTON1_MASK;
@@ -286,20 +311,22 @@ build_pointer_event_state (unsigned button_flags, unsigned key_flags)
   if (button_flags & GI_BUTTON_WHEEL_DOWN)
     state |= GDK_BUTTON5_MASK;
 
+
 #if 1
   if (key_flags & G_MODIFIERS_SHIFT)
-    state |= GDK_SHIFT_MASK;
+    ks |= GDK_SHIFT_MASK;
 
   if (key_flags & G_MODIFIERS_META)
-    state |= GDK_MOD1_MASK;
+    ks |= GDK_MOD1_MASK;
 
   if (key_flags & G_MODIFIERS_CAPSLOCK)
-    state |= GDK_LOCK_MASK;
+    ks |= GDK_LOCK_MASK;
 
   if (key_flags & G_MODIFIERS_CTRL)
-    state |= GDK_CONTROL_MASK;
+    ks |= GDK_CONTROL_MASK;
 #endif
-  return state;
+  //printf("build_pointer_event_state state = %x %x\n", state,ks);
+  return state|ks;
 }
 
 
@@ -371,52 +398,217 @@ fill_key_event_string (GdkEvent *event)
 }
 
 
+gulong
+_gdk_gix_get_next_tick (gulong suggested_tick)
+{
+  static gulong cur_tick = 0;
+
+  //if (suggested_tick == 0)
+  //  suggested_tick = GetTickCount ();
+  if (suggested_tick <= cur_tick)
+    return cur_tick;
+  else{
+    cur_tick = suggested_tick;
+  }
+  return cur_tick;
+}
+
+
+static void
+build_key_event_state (GdkEvent *event,
+		       gi_msg_t      *msg)
+{
+  unsigned mk = msg->body.message[3];
+  //unsigned mm = msg->body.message[3];
+  event->key.state = 0;
+
+  if (G_MODIFIERS_SHIFT & mk)
+    event->key.state |= GDK_SHIFT_MASK;
+
+  if (G_MODIFIERS_CAPSLOCK & 0x01)
+    event->key.state |= GDK_LOCK_MASK;
+
+  if (GI_BUTTON_L & mk)
+    event->key.state |= GDK_BUTTON1_MASK;
+  if (GI_BUTTON_M & mk)
+    event->key.state |= GDK_BUTTON2_MASK;
+  if (GI_BUTTON_R & mk)
+    event->key.state |= GDK_BUTTON3_MASK;
+  if (GI_BUTTON_WHEEL_UP & mk)
+    event->key.state |= GDK_BUTTON4_MASK;
+  if (GI_BUTTON_WHEEL_DOWN & mk)
+    event->key.state |= GDK_BUTTON5_MASK;
+
+  /*if (_gdk_keyboard_has_altgr &&
+      (key_state[VK_LCONTROL] & mk) &&
+      (key_state[VK_RMENU] & mk))
+    {
+      event->key.group = 1;
+      event->key.state |= GDK_MOD2_MASK;
+      if (key_state[VK_RCONTROL] & mk)
+	event->key.state |= GDK_CONTROL_MASK;
+      if (key_state[VK_LMENU] & mk)
+	event->key.state |= GDK_MOD1_MASK;
+    }
+  else*/
+    {
+      event->key.group = 0;
+      if (G_MODIFIERS_CTRL & mk)
+	event->key.state |= GDK_CONTROL_MASK;
+      if (G_MODIFIERS_META & mk)
+	event->key.state |= GDK_MOD1_MASK;
+    }
+}
+
+static void
+build_wm_ime_composition_event (GdkEvent *event,
+				gi_msg_t      *msg,
+				unsigned   wc)
+{
+  event->key.time = _gdk_gix_get_next_tick (msg->time);
+  
+  build_key_event_state (event, msg);
+
+  event->key.hardware_keycode = 0; /* FIXME: What should it be? */
+  event->key.string = NULL;
+  event->key.length = 0;
+  event->key.keyval = gdk_unicode_to_keyval (wc);
+  //fill_key_event_string (event); 
+}
+
+
 static GdkEvent *
 generate_key_event(GdkDeviceManager *device_manager, gi_msg_t *msg, GdkWindow *window)
 {
   GdkEvent *event;
   uint32_t code, modifier, level;
-  //GdkKeymap *keymap;
+  GdkKeymap *keymap;
   GdkDevice *device;
 
-  //keymap = gdk_keymap_get_for_display (device->display);
+  keymap = gdk_keymap_get_for_display (_gdk_display);
+  device = GDK_DEVICE_MANAGER_GIX (device_manager)->core_keyboard;
+
+  if (msg->attribute_1 && msg->params[3] > 127)
+  {
+	/* Build a key press event */
+	//event = gdk_event_new (GDK_KEY_PRESS);
+	event = gdk_event_new (msg->type == GI_MSG_KEY_DOWN ? 
+    GDK_KEY_PRESS : GDK_KEY_RELEASE);
+
+	event->key.window = window;
+	//gdk_event_set_device (event, GDK_DEVICE_MANAGER_WIN32 (device_manager)->core_keyboard);
+	build_wm_ime_composition_event (event, msg, msg->params[3]);
+	gdk_event_set_device (event, device);
+	return event;
+  }
 
   event = gdk_event_new (msg->type == GI_MSG_KEY_DOWN ? 
     GDK_KEY_PRESS : GDK_KEY_RELEASE);
   event->key.window =  (window);
-  event->button.time = msg->time;
-  event->key.state = build_pointer_event_state(msg->params[2], msg->body.message[3]);
-  event->key.group = 0;   
+  event->button.time =_gdk_gix_get_next_tick( msg->time);
+  build_key_event_state (event, msg);
+  //event->key.state = build_pointer_event_state(msg->params[2], msg->body.message[3]);
+  //event->key.group = 0;   
   event->key.hardware_keycode = 0; /* FIXME: What should it be? */
   event->key.string = NULL;
   event->key.length = 0;
-
-  if (msg->attribute_1 && msg->params[3] > 127)
-  {
-    //IME
-  event->key.keyval = gdk_unicode_to_keyval ( msg->params[3]);
-  }
-  else{
-  //event->key.keyval =  ( msg->params[3]);
-  gdk_keymap_translate_keyboard_state (gdk_keymap_get_for_display (_gdk_display),
+  
+  event->key.hardware_keycode =  ( msg->params[3]);
+  gdk_keymap_translate_keyboard_state ( keymap,
 					     event->key.hardware_keycode,
 					     event->key.state,
 					     event->key.group,
 					     &event->key.keyval,
 					     NULL, NULL, NULL);
+  printf("do get hardware_keycode %d,%d,%d\n",
+	   msg->params[3],event->key.hardware_keycode, event->key.keyval);
 
-  }
+  //event->key.keyval =  msg->params[3];
 
-
-   fill_key_event_string (event);
-  device = GDK_DEVICE_MANAGER_CORE (device_manager)->core_keyboard;
-  
   gdk_event_set_device (event, device);
-
-
-
+  fill_key_event_string (event); 
   return event;
 }
+
+
+static void
+assign_object (gpointer lhsp,
+	       gpointer rhs)
+{
+  if (*(gpointer *)lhsp != rhs)
+    {
+      if (*(gpointer *)lhsp != NULL)
+	g_object_unref (*(gpointer *)lhsp);
+      *(gpointer *)lhsp = rhs;
+      if (rhs != NULL)
+	g_object_ref (rhs);
+    }
+}
+
+
+
+static GdkWindow *
+find_window_for_mouse_event (GdkWindow* reported_window,
+			     gi_msg_t*       msg)
+{
+  gi_window_id_t hwnd;
+  int xroot_x, xroot_y, xwin_x, xwin_y;
+  int err;
+  GdkWindow* other_window = NULL;
+  GdkDeviceManagerCore *device_manager;
+  unsigned int xmask;
+
+  device_manager = GDK_DEVICE_MANAGER_GIX (gdk_display_get_device_manager (_gdk_display));
+
+  if (!_gdk_display_get_last_device_grab (_gdk_display, device_manager->core_pointer))
+    return reported_window;
+
+  err = gi_query_pointer ( GI_DESKTOP_WINDOW_ID,
+				 &hwnd,
+				 &xroot_x, &xroot_y,
+				 &xwin_x, &xwin_y,
+				 &xmask);
+  if (err <= 0) {
+	  return _gdk_root;
+  }
+
+  other_window = gdk_gix_window_lookup_for_display (_gdk_display, hwnd);
+
+  if (other_window == NULL)
+    return _gdk_root;
+
+  /*points = MAKEPOINTS (msg->lParam);
+  pt.x = points.x;
+  pt.y = points.y;
+  ClientToScreen (msg->hwnd, &pt);
+
+  hwnd = WindowFromPoint (pt);
+
+  if (hwnd != NULL)
+    {
+      RECT rect;
+
+      GetClientRect (hwnd, &rect);
+      ScreenToClient (hwnd, &pt);
+      if (!PtInRect (&rect, pt))
+	return _gdk_root;
+
+      other_window = gdk_gix_window_lookup_for_display (hwnd);
+    }
+
+  if (other_window == NULL)
+    return _gdk_root;
+
+  pt.x = points.x;
+  pt.y = points.y;
+  ClientToScreen (msg->hwnd, &pt);
+  ScreenToClient (GDK_WINDOW_HWND (other_window), &pt);
+  msg->lParam = MAKELPARAM (pt.x, pt.y);
+  */
+
+  return other_window;
+}
+
 
 
 static GdkEvent *
@@ -426,20 +618,31 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
   GdkEvent        *event    = NULL;
   GdkWindow *window;
   GdkDeviceManager *device_manager;
+  GdkDeviceGrabInfo *keyboard_grab = NULL;
+  GdkDeviceGrabInfo *pointer_grab = NULL;
+  GdkWindow *grab_window = NULL;
+
 
   device_manager = gdk_display_get_device_manager (display);
   g_assert(device_manager != NULL);
+  //device_manager_core = (GdkDeviceManagerCore *) device_manager;
 
   g_return_val_if_fail (g_event != NULL, NULL);
 
   window = gdk_gix_window_lookup_for_display (display, g_event->ev_window);
-  g_return_val_if_fail (GDK_IS_WINDOW (window), NULL);
   g_return_val_if_fail (window != NULL, NULL);
+  g_return_val_if_fail (GDK_IS_WINDOW (window), NULL);
+
+  keyboard_grab = _gdk_display_get_last_device_grab (_gdk_display,
+		GDK_DEVICE_MANAGER_GIX (device_manager)->core_keyboard);
+  pointer_grab = _gdk_display_get_last_device_grab (_gdk_display,
+		GDK_DEVICE_MANAGER_GIX (device_manager)->core_pointer);
+
 
   int root_x = g_event->params[0];
   int root_y = g_event->params[1];
 
-  g_object_ref (G_OBJECT (window)); 
+  g_object_ref (window); 
 
   switch (g_event->type)
   {
@@ -447,7 +650,15 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
   {
     GdkRectangle expose_rect;
     int xoffset = 0;
-    int yoffset = 0;     
+    int yoffset = 0;
+	
+	//event_data.attribute_1
+	if (g_event->attribute_1)
+	{
+		//double buffer
+		printf("GI_MSG_EXPOSURE double buffer\n");
+		goto got_event;
+	}
 
     expose_rect.x = g_event->body.rect.x + xoffset;
     expose_rect.y = g_event->body.rect.y + yoffset;
@@ -456,11 +667,10 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
 
     if (return_exposes) 
     {
+    cairo_region_t *result;
     GList *list = display->queued_events;
 
     event = gdk_event_new (GDK_EXPOSE);
-
-    cairo_region_t *result;
 
     result = cairo_region_create ();
 
@@ -496,30 +706,31 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
   {
     gint             wx, wy;
     guint            mask;
-    guint            button;
-    int button2;
+    guint            button_gdk = 0;
+    guint			 button_gix = 0;
+
+	//assign_object (&window, find_window_for_mouse_event (window, g_event));
 
     if (g_event->type == GI_MSG_BUTTON_DOWN){
-      button2 = g_event->params[2] ;
-      if (button2 & (GI_BUTTON_WHEEL_UP|GI_BUTTON_WHEEL_DOWN
-        |GI_BUTTON_WHEEL_LEFT|GI_BUTTON_WHEEL_RIGHT))
-      {
-      mask = build_pointer_event_state(button2, g_event->body.message[3]);
 
-      if (g_event->type == GI_MSG_BUTTON_DOWN)
-      _gdk_gix_modifiers |= mask;
-      else
-      _gdk_gix_modifiers &= ~mask; 
+      button_gix = g_event->params[2] ;
+      mask = build_pointer_event_state(button_gix, g_event->body.message[3]);
+      _gdk_gix_modifiers |= mask;      
+
+      if (button_gix & (GI_BUTTON_WHEEL_UP | GI_BUTTON_WHEEL_DOWN
+        | GI_BUTTON_WHEEL_LEFT | GI_BUTTON_WHEEL_RIGHT))
+      { 
    
       event = gdk_event_new ( GDK_SCROLL);
+      event->scroll.type = GDK_SCROLL;	  
 
-      event->scroll.type = GDK_SCROLL;
-
-      if (button2 & GI_BUTTON_WHEEL_UP)
+      if (button_gix & GI_BUTTON_WHEEL_UP){
         event->scroll.direction = GDK_SCROLL_UP;
-      else if (button2 & GI_BUTTON_WHEEL_DOWN)
+	  }
+      else if (button_gix & GI_BUTTON_WHEEL_DOWN){
         event->scroll.direction = GDK_SCROLL_DOWN;
-      else if (button2 & GI_BUTTON_WHEEL_LEFT)
+	  }
+      else if (button_gix & GI_BUTTON_WHEEL_LEFT)
         event->scroll.direction = GDK_SCROLL_LEFT;
       else
         event->scroll.direction = GDK_SCROLL_RIGHT;
@@ -530,52 +741,54 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
       event->scroll.x_root = (gfloat)root_x;
       event->scroll.y_root = (gfloat)root_y;
       event->scroll.state = (GdkModifierType) _gdk_gix_modifiers;
-      event->scroll.device =  display->core_pointer;
-      gdk_event_set_device (event, display->core_pointer);
+      event->scroll.device =  _gdk_display->core_pointer;
+      gdk_event_set_device (event, _gdk_display->core_pointer);
 
       goto got_event;    
-      }
+      } //scroll
+	  else{
+		  _gdk_gix_modifiers &= ~(GDK_BUTTON4_MASK|GDK_BUTTON5_MASK);
+	  }
     }
     else{
-      button2 = g_event->params[3] ;
-    }   
-
-    if(button2 & GI_BUTTON_L){
-    button = 1;
-    }
-    else if(button2 &  GI_BUTTON_M){
-    button = 2;
-    }
-    else if(button2 &  GI_BUTTON_R){
-    button = 3;
-    }
-    else{
-    break;
-    }
-
-    mask = build_pointer_event_state(button2, g_event->body.message[3]);
-
-    if (g_event->type == GI_MSG_BUTTON_DOWN)
-      _gdk_gix_modifiers |= mask;
-    else
+      button_gix = g_event->params[3] ;
+	  mask = build_pointer_event_state(button_gix, g_event->body.message[3]);   
       _gdk_gix_modifiers &= ~mask;
+    }    
+
+	if(button_gix & GI_BUTTON_L){
+	  button_gdk = 1;
+	}
+	else if(button_gix &  GI_BUTTON_M){
+		button_gdk = 2;
+	}
+	else if(button_gix &  GI_BUTTON_R){
+		button_gdk = 3;
+	}
+	else{
+    //break;
+    }
+	  
+	printf("%s: mask=%x,%x, button_gdk=%d %p\n",
+		__FUNCTION__, mask,_gdk_gix_modifiers, button_gdk,window);
+
 
     event = gdk_event_new ( g_event->type == GI_MSG_BUTTON_DOWN ?
-		GDK_BUTTON_PRESS : GDK_BUTTON_RELEASE);
+		GDK_BUTTON_PRESS : GDK_BUTTON_RELEASE);	
 
     event->button.x_root = root_x;
     event->button.y_root = root_y;
 	event->button.window = window;
-	event->button.time = g_event->time;
+	event->button.axes = NULL;
+	event->button.time = _gdk_gix_get_next_tick(g_event->time);
     event->button.x = g_event->body.rect.x;
     event->button.y = g_event->body.rect.y;
     event->button.state  = _gdk_gix_modifiers;
-    event->button.button = button;
-    event->button.device = display->core_pointer;
-    gdk_event_set_device (event, display->core_pointer);
+    event->button.button = button_gdk;
+    event->button.device = _gdk_display->core_pointer;
+    gdk_event_set_device (event, _gdk_display->core_pointer);
 
     //g_print("%s: %d got button message\n",__FUNCTION__,__LINE__);
-
     //if (g_event->type == GI_MSG_BUTTON_DOWN)
     //_gdk_event_button_generate (gdk_display_get_default (),event);  
   }
@@ -584,8 +797,11 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
   case GI_MSG_MOUSE_MOVE:
   {
     event = gdk_event_new (GDK_MOTION_NOTIFY);
+
+	//assign_object (&window, find_window_for_mouse_event (window, g_event));
+	
     event->motion.window = window;
-    event->motion.time = (g_event->time);
+    event->motion.time = _gdk_gix_get_next_tick(g_event->time);
     event->motion.x = g_event->body.rect.x;
     event->motion.y = g_event->body.rect.y;
     event->motion.x_root = root_y;
@@ -593,9 +809,9 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
     event->motion.axes = NULL;
     _gdk_gix_modifiers = build_pointer_event_state (
       g_event->params[2], g_event->params[3]);
-    event->motion.state = _gdk_gix_modifiers;
+    event->motion.state = 0;//_gdk_gix_modifiers;
     event->motion.is_hint = FALSE;
-    gdk_event_set_device (event, display->core_pointer);  
+    gdk_event_set_device (event, _gdk_display->core_pointer);  
   }
   break;
 
@@ -617,6 +833,8 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
   g_print("%s: %d got focus message\n",__FUNCTION__,__LINE__);
   //gdk_gix_change_focus (_gdk_parent_root);
   gi_ime_associate_window(GDK_WINDOW_XID(window), NULL);
+
+  //generate_grab_broken_event();
   event = generate_focus_event (device_manager,window, FALSE);
   break;
 
@@ -640,9 +858,10 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
   case GI_MSG_MOUSE_EXIT:
     
     event = gdk_event_new (GDK_LEAVE_NOTIFY);
+	
     event->crossing.window =  (window);
 	event->crossing.subwindow = NULL;
-    event->crossing.time = g_event->time;
+    event->crossing.time = _gdk_gix_get_next_tick(g_event->time);
     event->crossing.x = g_event->body.rect.x;
     event->crossing.y = g_event->body.rect.y;
     event->crossing.x_root = root_x;
@@ -650,15 +869,16 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
     event->crossing.state = _gdk_gix_modifiers;
     event->crossing.mode = GDK_CROSSING_NORMAL;
     event->crossing.detail = GDK_NOTIFY_ANCESTOR;
-    gdk_event_set_device (event, display->core_pointer);
+    gdk_event_set_device (event, _gdk_display->core_pointer);
   break;
 
   case GI_MSG_MOUSE_ENTER:
   {        
     event = gdk_event_new (GDK_LEAVE_NOTIFY);
+	
     event->crossing.window =  (window);
 	event->crossing.subwindow = NULL;
-    event->crossing.time = g_event->time;
+    event->crossing.time = _gdk_gix_get_next_tick(g_event->time);
     event->crossing.x = g_event->body.rect.x;
     event->crossing.y = g_event->body.rect.y;
     event->crossing.x_root = root_x;
@@ -666,7 +886,7 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
     event->crossing.state = _gdk_gix_modifiers;
     event->crossing.mode = GDK_CROSSING_NORMAL;
     event->crossing.detail = GDK_NOTIFY_ANCESTOR;
-    gdk_event_set_device (event, display->core_pointer);
+    gdk_event_set_device (event, _gdk_display->core_pointer);
   }
   break;
 
@@ -721,7 +941,15 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
   }
 
 got_event:
-  g_object_unref (G_OBJECT (window));
+  if (!event)
+  {
+	  event = gdk_event_new(GDK_NOTHING);
+	  /* Mark this event as having no resources to be freed */
+      event->any.window = NULL;
+      event->any.type = GDK_NOTHING;
+  }
+
+  g_object_unref (window);
 
   return event;
 }

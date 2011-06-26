@@ -320,10 +320,14 @@ gdk_device_core_ungrab (GdkDevice *device,
                         guint32    time_)
 {
   GdkDisplay *display;
-  //gulong serial;
+  GdkDeviceGrabInfo *info;
 
   display = gdk_device_get_display (device);
-  //serial = NextRequest (GDK_DISPLAY_XDISPLAY (display));
+
+ info = _gdk_display_get_last_device_grab (display, device);
+
+  if (info)
+    info->serial_end = 0;
 
   if (gdk_device_get_source (device) == GDK_SOURCE_KEYBOARD)
     gi_ungrab_keyboard ();
@@ -331,6 +335,7 @@ gdk_device_core_ungrab (GdkDevice *device,
     gi_ungrab_pointer ();
 
   //_gdk_x11_display_update_grab_info_ungrab (display, device, time_, serial);
+  _gdk_display_device_grab_update (display, device, NULL, 0);
 }
 
 static void
@@ -432,7 +437,7 @@ gdk_device_manager_core_finalize (GObject *object)
 {
   GdkDeviceManagerCore *device_manager_core;
 
-  device_manager_core = GDK_DEVICE_MANAGER_CORE (object);
+  device_manager_core = GDK_DEVICE_MANAGER_GIX (object);
 
   g_object_unref (device_manager_core->core_pointer);
   g_object_unref (device_manager_core->core_keyboard);
@@ -447,7 +452,7 @@ gdk_device_manager_core_constructed (GObject *object)
   GdkDeviceManagerCore *device_manager;
   GdkDisplay *display;
 
-  device_manager = GDK_DEVICE_MANAGER_CORE (object);
+  device_manager = GDK_DEVICE_MANAGER_GIX (object);
   display = gdk_device_manager_get_display (GDK_DEVICE_MANAGER (object));
   device_manager->core_pointer = create_core_pointer (GDK_DEVICE_MANAGER (device_manager), display);
   device_manager->core_keyboard = create_core_keyboard (GDK_DEVICE_MANAGER (device_manager), display);

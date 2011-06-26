@@ -92,12 +92,12 @@ struct _GdkDeviceCoreClass
 
 
 
-#define GDK_TYPE_DEVICE_MANAGER_CORE         (gdk_device_manager_core_get_type ())
-#define GDK_DEVICE_MANAGER_CORE(o)           (G_TYPE_CHECK_INSTANCE_CAST ((o), GDK_TYPE_DEVICE_MANAGER_CORE, GdkDeviceManagerCore))
-#define GDK_DEVICE_MANAGER_CORE_CLASS(c)     (G_TYPE_CHECK_CLASS_CAST ((c), GDK_TYPE_DEVICE_MANAGER_CORE, GdkDeviceManagerCoreClass))
-#define GDK_IS_DEVICE_MANAGER_CORE(o)        (G_TYPE_CHECK_INSTANCE_TYPE ((o), GDK_TYPE_DEVICE_MANAGER_CORE))
-#define GDK_IS_DEVICE_MANAGER_CORE_CLASS(c)  (G_TYPE_CHECK_CLASS_TYPE ((c), GDK_TYPE_DEVICE_MANAGER_CORE))
-#define GDK_DEVICE_MANAGER_CORE_GET_CLASS(o) (G_TYPE_INSTANCE_GET_CLASS ((o), GDK_TYPE_DEVICE_MANAGER_CORE, GdkDeviceManagerCoreClass))
+#define GDK_TYPE_DEVICE_MANAGER_GIX         (gdk_device_manager_core_get_type ())
+#define GDK_DEVICE_MANAGER_GIX(o)           (G_TYPE_CHECK_INSTANCE_CAST ((o), GDK_TYPE_DEVICE_MANAGER_GIX, GdkDeviceManagerCore))
+#define GDK_DEVICE_MANAGER_GIX_CLASS(c)     (G_TYPE_CHECK_CLASS_CAST ((c), GDK_TYPE_DEVICE_MANAGER_GIX, GdkDeviceManagerCoreClass))
+#define GDK_IS_DEVICE_MANAGER_GIX(o)        (G_TYPE_CHECK_INSTANCE_TYPE ((o), GDK_TYPE_DEVICE_MANAGER_GIX))
+#define GDK_IS_DEVICE_MANAGER_GIX_CLASS(c)  (G_TYPE_CHECK_CLASS_TYPE ((c), GDK_TYPE_DEVICE_MANAGER_GIX))
+#define GDK_DEVICE_MANAGER_GIX_GET_CLASS(o) (G_TYPE_INSTANCE_GET_CLASS ((o), GDK_TYPE_DEVICE_MANAGER_GIX, GdkDeviceManagerCoreClass))
 
 typedef struct _GdkDeviceManagerCore GdkDeviceManagerCore;
 typedef struct _GdkDeviceManagerCoreClass GdkDeviceManagerCoreClass;
@@ -374,6 +374,13 @@ void _gdk_gix_display_manager_add_display (GdkDisplayManager *manager,
 					       GdkDisplay        *display);
 void _gdk_gix_display_manager_remove_display (GdkDisplayManager *manager,
 						  GdkDisplay        *display);
+gulong
+_gdk_gix_get_next_tick (gulong suggested_tick);
+
+GdkWindow *
+gdk_gix_window_lookup_for_display (GdkDisplay *display,
+                                   gi_window_id_t      window);
+
 
 extern GdkDisplay *_gdk_display;
 extern GdkScreen *_gdk_screen;

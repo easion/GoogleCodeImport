@@ -60,6 +60,10 @@ struct _GdkDisplayGix
   /* X ID hashtable */
   GHashTable *xid_ht;
 
+  /* Mapping to/from virtual atoms */
+  GHashTable *atom_from_virtual;
+  GHashTable *atom_to_virtual;
+
 };
 
 struct _GdkDisplayGixClass

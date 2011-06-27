@@ -11,7 +11,7 @@
 
 G_DEFINE_TYPE (GdkDeviceCore, gdk_device_core, GDK_TYPE_DEVICE)
 
-G_DEFINE_TYPE (GdkDeviceManagerCore,
+G_DEFINE_TYPE (GdkDeviceManagerGix,
 	       gdk_device_manager_core, GDK_TYPE_DEVICE_MANAGER)
 
 
@@ -385,7 +385,7 @@ static GdkDevice *
 gdk_device_manager_core_get_client_pointer (GdkDeviceManager *device_manager);
 
 static void
-gdk_device_manager_core_class_init (GdkDeviceManagerCoreClass *klass)
+gdk_device_manager_core_class_init (GdkDeviceManagerGixClass *klass)
 {
   GdkDeviceManagerClass *device_manager_class = GDK_DEVICE_MANAGER_CLASS (klass);
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -427,7 +427,7 @@ create_core_keyboard (GdkDeviceManager *device_manager,GdkDisplay       *display
 
 
 static void
-gdk_device_manager_core_init (GdkDeviceManagerCore *device_manager)
+gdk_device_manager_core_init (GdkDeviceManagerGix *device_manager)
 {
 }
 
@@ -435,7 +435,7 @@ gdk_device_manager_core_init (GdkDeviceManagerCore *device_manager)
 static void
 gdk_device_manager_core_finalize (GObject *object)
 {
-  GdkDeviceManagerCore *device_manager_core;
+  GdkDeviceManagerGix *device_manager_core;
 
   device_manager_core = GDK_DEVICE_MANAGER_GIX (object);
 
@@ -449,7 +449,7 @@ gdk_device_manager_core_finalize (GObject *object)
 static void
 gdk_device_manager_core_constructed (GObject *object)
 {
-  GdkDeviceManagerCore *device_manager;
+  GdkDeviceManagerGix *device_manager;
   GdkDisplay *display;
 
   device_manager = GDK_DEVICE_MANAGER_GIX (object);
@@ -466,12 +466,12 @@ static GList *
 gdk_device_manager_core_list_devices (GdkDeviceManager *device_manager,
                                       GdkDeviceType     type)
 {
-  GdkDeviceManagerCore *device_manager_core;
+  GdkDeviceManagerGix *device_manager_core;
   GList *devices = NULL;
 
   if (type == GDK_DEVICE_TYPE_MASTER)
     {
-      device_manager_core = (GdkDeviceManagerCore *) device_manager;
+      device_manager_core = (GdkDeviceManagerGix *) device_manager;
 	  devices = g_list_prepend (devices, device_manager_core->core_keyboard);
       devices = g_list_prepend (devices, device_manager_core->core_pointer);
     }
@@ -482,9 +482,9 @@ gdk_device_manager_core_list_devices (GdkDeviceManager *device_manager,
 static GdkDevice *
 gdk_device_manager_core_get_client_pointer (GdkDeviceManager *device_manager)
 {
-  GdkDeviceManagerCore *device_manager_core;
+  GdkDeviceManagerGix *device_manager_core;
 
-  device_manager_core = (GdkDeviceManagerCore *) device_manager;
+  device_manager_core = (GdkDeviceManagerGix *) device_manager;
   return device_manager_core->core_pointer;
 }
 

@@ -34,7 +34,7 @@ _gdk_input_init (GdkDisplay *display)
 {
   GdkDisplayGix *display_gix;
   //GdkDeviceManager *device_manager;
-  GdkDeviceManagerCore *gix_device_manager;
+  GdkDeviceManagerGix *gix_device_manager;
   GdkDevice *device;
   GList *list, *l;
 
@@ -97,15 +97,16 @@ _gdk_gix_display_open (const gchar *display_name)
   GdkDisplayGix *display_gix;
   int fd;
 
-  if (display_name == NULL ||
-      g_ascii_strcasecmp (display_name,
-			  gdk_display_get_name (_gdk_display)) == 0)
-    {
-      if (_gdk_display != NULL)
+  if (_gdk_display != NULL)
 	{
 	  GDK_NOTE (MISC, g_print ("... return _gdk_display\n"));
 	  return _gdk_display;
 	}
+
+  if (display_name == NULL ||
+      g_ascii_strcasecmp (display_name, gdk_display_get_name (_gdk_display)) == 0)
+    {
+      
     }
   else
     {
@@ -130,8 +131,6 @@ _gdk_gix_display_open (const gchar *display_name)
 
   _gdk_visual_init ();
   _gdk_windowing_window_init (_gdk_display,_gdk_screen);
-
-
   _gdk_input_init (_gdk_display);
 
   /* Precalculate display name */
@@ -185,18 +184,24 @@ gdk_gix_display_finalize (GObject *object)
 
   g_free (display_gix->startup_notification_id);
 
+  /* Atom Hashtable */
+  g_hash_table_destroy (display_gix->atom_from_virtual);
+  g_hash_table_destroy (display_gix->atom_to_virtual);
+
   G_OBJECT_CLASS (_gdk_display_gix_parent_class)->finalize (object);
 }
 
 static G_CONST_RETURN gchar *
 gdk_gix_display_get_name (GdkDisplay *display)
 {
+  g_return_val_if_fail (GDK_IS_DISPLAY (display), NULL);
   return "Gix";
 }
 
 static gint
 gdk_gix_display_get_n_screens (GdkDisplay *display)
 {
+  g_return_val_if_fail (GDK_IS_DISPLAY (display), 0);
   return 1;
 }
 
@@ -207,7 +212,8 @@ gdk_gix_display_get_screen (GdkDisplay *display,
   g_return_val_if_fail (GDK_IS_DISPLAY (display), NULL);
   g_return_val_if_fail (screen_num == 0, NULL);
 
-  return GDK_DISPLAY_GIX (display)->display_screen;
+  //return GDK_DISPLAY_GIX (display)->display_screen;
+  return _gdk_screen;
 }
 
 static GdkScreen *
@@ -215,7 +221,8 @@ gdk_gix_display_get_default_screen (GdkDisplay *display)
 {
   g_return_val_if_fail (GDK_IS_DISPLAY (display), NULL);
 
-  return GDK_DISPLAY_GIX (display)->display_screen;
+  //return GDK_DISPLAY_GIX (display)->display_screen;
+  return _gdk_screen;
 }
 
 static void
@@ -268,7 +275,10 @@ gdk_gix_display_get_default_group (GdkDisplay *display)
 static gboolean
 gdk_gix_display_supports_selection_notification (GdkDisplay *display)
 {
-  return TRUE;
+  g_return_val_if_fail (GDK_IS_DISPLAY (display), FALSE);
+
+  return FALSE;
+  //return TRUE;
 }
 
 static gboolean
@@ -297,13 +307,22 @@ gdk_gix_display_store_clipboard (GdkDisplay    *display,
 static gboolean
 gdk_gix_display_supports_shapes (GdkDisplay *display)
 {
+  g_return_val_if_fail (GDK_IS_DISPLAY (display), FALSE);
+
   return TRUE;
+  //return TRUE;
 }
 
 static gboolean
 gdk_gix_display_supports_input_shapes (GdkDisplay *display)
 {
-  return TRUE;
+  g_return_val_if_fail (GDK_IS_DISPLAY (display), FALSE);
+
+  /* Not yet implemented. See comment in
+   * gdk_window_input_shape_combine_mask().
+   */
+
+  return FALSE;
 }
 
 static gboolean
@@ -338,10 +357,7 @@ gdk_gix_display_get_next_serial (GdkDisplay *display)
   return 0;
 }
 
-void
-_gdk_gix_display_make_default (GdkDisplay *display)
-{
-}
+
 
 void
 gdk_gix_display_broadcast_startup_message (GdkDisplay *display,

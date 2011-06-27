@@ -555,7 +555,7 @@ find_window_for_mouse_event (GdkWindow* reported_window,
   int xroot_x, xroot_y, xwin_x, xwin_y;
   int err;
   GdkWindow* other_window = NULL;
-  GdkDeviceManagerCore *device_manager;
+  GdkDeviceManagerGix *device_manager;
   unsigned int xmask;
 
   device_manager = GDK_DEVICE_MANAGER_GIX (gdk_display_get_device_manager (_gdk_display));
@@ -625,7 +625,7 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
 
   device_manager = gdk_display_get_device_manager (display);
   g_assert(device_manager != NULL);
-  //device_manager_core = (GdkDeviceManagerCore *) device_manager;
+  //device_manager_core = (GdkDeviceManagerGix *) device_manager;
 
   g_return_val_if_fail (g_event != NULL, NULL);
 

@@ -14,12 +14,23 @@
 #include <string.h>
 
 
+typedef struct _OwnerInfo OwnerInfo;
+
+struct _OwnerInfo
+{
+  GdkAtom    selection;
+  GdkWindow *owner;
+  gulong     serial;
+};
+
+static GSList *owner_list;
+
 static GPtrArray *virtual_atom_array;
 static GHashTable *virtual_atom_hash;
 
 static const gchar xatoms_string[] = 
   /* These are all the standard predefined X atoms */
-  "\0"  /* leave a space for None, even though it is not a predefined atom */
+  "\0"  /* leave a space for 0, even though it is not a predefined atom */
   "PRIMARY\0"
   "SECONDARY\0"
   "ARC\0"
@@ -186,6 +197,56 @@ gdk_x11_get_xatom_by_name_for_display (GdkDisplay  *display,
 					    gdk_atom_intern (atom_name, FALSE));
 }
 
+GdkAtom
+gdk_x11_xatom_to_atom_for_display (GdkDisplay *display,
+				   gi_atom_id_t	       xatom)
+{
+  GdkDisplayGix *display_x11;
+  GdkAtom virtual_atom = GDK_NONE;
+  
+  g_return_val_if_fail (GDK_IS_DISPLAY (display), GDK_NONE);
+
+  if (xatom == 0)
+    return GDK_NONE;
+
+  if (gdk_display_is_closed (display))
+    return GDK_NONE;
+
+  display_x11 = GDK_DISPLAY_GIX (display);
+  
+  if (xatom < G_N_ELEMENTS (xatoms_offset) - N_CUSTOM_PREDEFINED)
+    return INDEX_TO_ATOM (xatom);
+  
+  if (display_x11->atom_to_virtual)
+    virtual_atom = GDK_POINTER_TO_ATOM (g_hash_table_lookup (display_x11->atom_to_virtual,
+							     GUINT_TO_POINTER (xatom)));
+  
+  if (!virtual_atom)
+    {
+      /* If this atom doesn't exist, we'll die with an X error unless
+       * we take precautions
+       */
+      char *name;
+      //gdk_x11_display_error_trap_push (display);
+      name = gi_get_atom_name ( xatom);
+      /*if (gdk_x11_display_error_trap_pop (display))
+	{
+	  g_warning (G_STRLOC " invalid X atom: %ld", xatom);
+	}
+      else*/
+	{
+	  virtual_atom = gdk_atom_intern (name, FALSE);
+	  free (name);
+	  
+	  insert_atom_pair (display, virtual_atom, xatom);
+	}
+    }
+
+  return virtual_atom;
+}
+
+
+
 
 GdkWindow *
 _gdk_gix_display_get_selection_owner (GdkDisplay *display,
@@ -213,10 +274,58 @@ _gdk_gix_display_set_selection_owner (GdkDisplay *display,
 					  guint32     time,
 					  gboolean    send_event)
 {
-  fprintf(stderr, "set selection owner: atom %ld, owner %p\n",
-	  selection, owner);
+  //Display *xdisplay;
+  gi_window_id_t xwindow;
+  gi_atom_id_t xselection;
+  GSList *tmp_list;
+  OwnerInfo *info;
 
-  return TRUE;
+  if (gdk_display_is_closed (display))
+    return FALSE;
+
+  if (owner)
+    {
+      if (GDK_WINDOW_DESTROYED (owner) || !GDK_WINDOW_IS_GIX (owner))
+        return FALSE;
+
+      gdk_window_ensure_native (owner);
+      //xdisplay = GDK_WINDOW_XDISPLAY (owner);
+      xwindow = GDK_WINDOW_XID (owner);
+    }
+  else
+    {
+      //xdisplay = GDK_DISPLAY_XDISPLAY (display);
+      xwindow = 0;
+    }
+
+  xselection = gdk_x11_atom_to_xatom_for_display (display, selection);
+
+  tmp_list = owner_list;
+  while (tmp_list)
+    {
+      info = tmp_list->data;
+      if (info->selection == selection)
+        {
+          owner_list = g_slist_remove (owner_list, info);
+          g_free (info);
+          break;
+        }
+      tmp_list = tmp_list->next;
+    }
+
+  if (owner)
+    {
+      info = g_new (OwnerInfo, 1);
+      info->owner = owner;
+      info->serial = 0;//NextRequest (GDK_WINDOW_XDISPLAY (owner));
+      info->selection = selection;
+
+      owner_list = g_slist_prepend (owner_list, info);
+    }
+
+  gi_set_selection_owner ( xselection, xwindow, time);
+
+  return (gi_get_selection_owner ( xselection) == xwindow);
 }
 
 void
@@ -227,6 +336,24 @@ _gdk_gix_display_send_selection_notify (GdkDisplay *dispay,
 					    GdkAtom          property,
 					    guint32          time)
 {
+/*
+  XSelectionEvent xevent;
+
+  xevent.type = SelectionNotify;
+  xevent.serial = 0;
+  xevent.send_event = True;
+  xevent.requestor = GDK_WINDOW_XID (requestor);
+  xevent.selection = gdk_x11_atom_to_xatom_for_display (display, selection);
+  xevent.target = gdk_x11_atom_to_xatom_for_display (display, target);
+  if (property == GDK_NONE)
+    xevent.property = None;
+  else
+    xevent.property = gdk_x11_atom_to_xatom_for_display (display, property);
+  xevent.time = time;
+
+  _gdk_x11_display_send_xevent (display, xevent.requestor, False, NoEventMask, (XEvent*) & xevent);
+
+*/
 }
 
 gint
@@ -236,6 +363,100 @@ _gdk_gix_display_get_selection_property (GdkDisplay  *display,
 					     GdkAtom     *ret_type,
 					     gint        *ret_format)
 {
+  gulong nitems;
+  gulong nbytes;
+  gulong length = 0;
+  gi_atom_id_t prop_type;
+  gint prop_format;
+  guchar *t = NULL;
+
+  if (GDK_WINDOW_DESTROYED (requestor) || !GDK_WINDOW_IS_GIX (requestor))
+    goto err;
+
+  t = NULL;
+
+  /* We can't delete the selection here, because it might be the INCR
+     protocol, in which case the client has to make sure they'll be
+     notified of PropertyChange events _before_ the property is deleted.
+     Otherwise there's no guarantee we'll win the race ... */
+  if (gi_get_window_property (
+                          GDK_WINDOW_XID (requestor),
+                          gdk_x11_get_xatom_by_name_for_display (display, "GDK_SELECTION"),
+                          0, 0x1FFFFFFF /* MAXINT32 / 4 */, FALSE,
+                          G_ANY_PROP_TYPE, &prop_type, &prop_format,
+                          &nitems, &nbytes, &t) != 0)
+    goto err;
+
+  if (prop_type != 0)
+    {
+      if (ret_type)
+        *ret_type = gdk_x11_xatom_to_atom_for_display (display, prop_type);
+      if (ret_format)
+        *ret_format = prop_format;
+
+      if (prop_type == GA_ATOM ||
+          prop_type == gdk_x11_get_xatom_by_name_for_display (display, "ATOM_PAIR"))
+        {
+          gi_atom_id_t* atoms = (gi_atom_id_t*) t;
+          GdkAtom* atoms_dest;
+          gint num_atom, i;
+
+          if (prop_format != 32)
+            goto err;
+
+          num_atom = nitems;
+          length = sizeof (GdkAtom) * num_atom + 1;
+
+          if (data)
+            {
+              *data = g_malloc (length);
+              (*data)[length - 1] = '\0';
+              atoms_dest = (GdkAtom *)(*data);
+
+              for (i=0; i < num_atom; i++)
+                atoms_dest[i] = gdk_x11_xatom_to_atom_for_display (display, atoms[i]);
+            }
+        }
+      else
+        {
+          switch (prop_format)
+            {
+            case 8:
+              length = nitems;
+              break;
+            case 16:
+              length = sizeof(short) * nitems;
+              break;
+            case 32:
+              length = sizeof(long) * nitems;
+              break;
+            default:
+              g_assert_not_reached ();
+              break;
+            }
+
+          /* Add on an extra byte to handle null termination.  X guarantees
+             that t will be 1 longer than nitems and null terminated */
+          length += 1;
+
+          if (data)
+            *data = g_memdup (t, length);
+        }
+
+      if (t)
+        free (t);
+
+      return length - 1;
+    }
+
+ err:
+  if (ret_type)
+    *ret_type = GDK_NONE;
+  if (ret_format)
+    *ret_format = 0;
+  if (data)
+    *data = NULL;
+
   return 0;
 }
 
@@ -271,9 +492,60 @@ _gdk_gix_display_text_property_to_utf8_list (GdkDisplay    *display,
   return 0;
 }
 
+static gchar *
+sanitize_utf8 (const gchar *src,
+               gboolean return_latin1)
+{
+  gint len = strlen (src);
+  GString *result = g_string_sized_new (len);
+  const gchar *p = src;
+
+  while (*p)
+    {
+      if (*p == '\r')
+        {
+          p++;
+          if (*p == '\n')
+            p++;
+
+          g_string_append_c (result, '\n');
+        }
+      else
+        {
+          gunichar ch = g_utf8_get_char (p);
+
+          if (!((ch < 0x20 && ch != '\t' && ch != '\n') || (ch >= 0x7f && ch < 0xa0)))
+            {
+              if (return_latin1)
+                {
+                  if (ch <= 0xff)
+                    g_string_append_c (result, ch);
+                  else
+                    g_string_append_printf (result,
+                                            ch < 0x10000 ? "\\u%04x" : "\\U%08x",
+                                            ch);
+                }
+              else
+                {
+                  char buf[7];
+                  gint buflen;
+
+                  buflen = g_unichar_to_utf8 (ch, buf);
+                  g_string_append_len (result, buf, buflen);
+                }
+            }
+
+          p = g_utf8_next_char (p);
+        }
+    }
+
+  return g_string_free (result, FALSE);
+}
+
 gchar *
 _gdk_gix_display_utf8_to_string_target (GdkDisplay  *display,
 					    const gchar *str)
 {
-  return NULL;
+  //return NULL;
+  return sanitize_utf8 (str, TRUE);
 }

@@ -1582,6 +1582,30 @@ gdk_gix_window_set_group (GdkWindow *window,
   g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
 }
 
+
+static GQuark
+get_decorations_quark ()
+{
+  static GQuark quark = 0;
+  
+  if (!quark)
+    quark = g_quark_from_static_string ("gdk-window-decorations");
+  
+  return quark;
+}
+
+
+static GQuark
+get_functions_quark ()
+{
+  static GQuark quark = 0;
+  
+  if (!quark)
+    quark = g_quark_from_static_string ("gdk-window-functions");
+  
+  return quark;
+}
+
 static void
 gdk_gix_window_set_decorations (GdkWindow      *window,
 				    GdkWMDecoration decorations)

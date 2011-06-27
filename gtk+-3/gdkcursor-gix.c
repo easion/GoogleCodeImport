@@ -372,11 +372,13 @@ _gdk_gix_display_get_maximal_cursor_size (GdkDisplay *display,
 gboolean
 _gdk_gix_display_supports_cursor_alpha (GdkDisplay *display)
 {
+  g_return_val_if_fail (display == _gdk_display, FALSE);
   return TRUE;
 }
 
 gboolean
 _gdk_gix_display_supports_cursor_color (GdkDisplay *display)
 {
+  g_return_val_if_fail (display == _gdk_display, FALSE);
   return TRUE;
 }

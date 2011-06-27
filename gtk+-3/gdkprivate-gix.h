@@ -62,22 +62,6 @@ struct _GdkGixCursorClass
 typedef struct _GdkDeviceCore GdkDeviceCore;
 typedef struct _GdkDeviceCoreClass GdkDeviceCoreClass;
 
-/*
-typedef struct _GdkGixDevice GdkGixDevice;
-struct _GdkGixDevice
-{
-  GdkDisplay *display;
-  //GdkDevice *pointer;
-  //GdkDevice *keyboard;
-  //GdkModifierType modifiers;
- // GdkWindow *pointer_focus;
-  //GdkWindow *keyboard_focus;
-  void *device;
-  int32_t x, y;
-  int32_t surface_x, surface_y;
-  uint32_t time;
-};
-*/
 
 struct _GdkDeviceCore
 {
@@ -93,16 +77,16 @@ struct _GdkDeviceCoreClass
 
 
 #define GDK_TYPE_DEVICE_MANAGER_GIX         (gdk_device_manager_core_get_type ())
-#define GDK_DEVICE_MANAGER_GIX(o)           (G_TYPE_CHECK_INSTANCE_CAST ((o), GDK_TYPE_DEVICE_MANAGER_GIX, GdkDeviceManagerCore))
-#define GDK_DEVICE_MANAGER_GIX_CLASS(c)     (G_TYPE_CHECK_CLASS_CAST ((c), GDK_TYPE_DEVICE_MANAGER_GIX, GdkDeviceManagerCoreClass))
+#define GDK_DEVICE_MANAGER_GIX(o)           (G_TYPE_CHECK_INSTANCE_CAST ((o), GDK_TYPE_DEVICE_MANAGER_GIX, GdkDeviceManagerGix))
+#define GDK_DEVICE_MANAGER_GIX_CLASS(c)     (G_TYPE_CHECK_CLASS_CAST ((c), GDK_TYPE_DEVICE_MANAGER_GIX, GdkDeviceManagerGixClass))
 #define GDK_IS_DEVICE_MANAGER_GIX(o)        (G_TYPE_CHECK_INSTANCE_TYPE ((o), GDK_TYPE_DEVICE_MANAGER_GIX))
 #define GDK_IS_DEVICE_MANAGER_GIX_CLASS(c)  (G_TYPE_CHECK_CLASS_TYPE ((c), GDK_TYPE_DEVICE_MANAGER_GIX))
-#define GDK_DEVICE_MANAGER_GIX_GET_CLASS(o) (G_TYPE_INSTANCE_GET_CLASS ((o), GDK_TYPE_DEVICE_MANAGER_GIX, GdkDeviceManagerCoreClass))
+#define GDK_DEVICE_MANAGER_GIX_GET_CLASS(o) (G_TYPE_INSTANCE_GET_CLASS ((o), GDK_TYPE_DEVICE_MANAGER_GIX, GdkDeviceManagerGixClass))
 
-typedef struct _GdkDeviceManagerCore GdkDeviceManagerCore;
-typedef struct _GdkDeviceManagerCoreClass GdkDeviceManagerCoreClass;
+typedef struct _GdkDeviceManagerGix GdkDeviceManagerGix;
+typedef struct _GdkDeviceManagerGixClass GdkDeviceManagerGixClass;
 
-struct _GdkDeviceManagerCore
+struct _GdkDeviceManagerGix
 {
   GdkDeviceManager parent_object;
   GdkDevice *core_pointer;
@@ -110,7 +94,7 @@ struct _GdkDeviceManagerCore
   //GList *devices;
 };
 
-struct _GdkDeviceManagerCoreClass
+struct _GdkDeviceManagerGixClass
 {
   GdkDeviceManagerClass parent_class;
 };
@@ -362,7 +346,6 @@ void     _gdk_gix_display_flush (GdkDisplay *display, GSource *source);
 GdkAppLaunchContext *_gdk_gix_display_get_app_launch_context (GdkDisplay *display);
 
 GdkDisplay *_gdk_gix_display_open (const gchar *display_name);
-void        _gdk_gix_display_make_default (GdkDisplay *display);
 
 GdkWindow *_gdk_gix_screen_create_root_window (GdkScreen *screen,
 						   int width,

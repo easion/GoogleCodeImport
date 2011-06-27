@@ -168,7 +168,8 @@ gdk_gix_screen_get_root_window (GdkScreen *screen)
 {
   g_return_val_if_fail (GDK_IS_SCREEN (screen), NULL);
 
-  return GDK_SCREEN_GIX (screen)->root_window;
+  //return GDK_SCREEN_GIX (screen)->root_window;
+  return _gdk_root;
 }
 
 static gint
@@ -294,6 +295,91 @@ gdk_gix_screen_get_setting (GdkScreen   *screen,
 				const gchar *name,
 				GValue      *value)
 {
+  g_return_val_if_fail (GDK_IS_SCREEN (screen), FALSE);
+
+  /*
+   * XXX : if these values get changed through the Windoze UI the
+   *       respective gdk_events are not generated yet.
+   */
+  if (strcmp ("gtk-theme-name", name) == 0) 
+    {
+      g_value_set_string (value, "ms-windows");
+    }
+  else if (strcmp ("gtk-double-click-time", name) == 0)
+    {
+      //gint i = GetDoubleClickTime ();
+      //GDK_NOTE(MISC, g_print("gdk_screen_get_setting(\"%s\") : %d\n", name, i));
+      //g_value_set_int (value, i);
+      return FALSE;
+    }
+  else if (strcmp ("gtk-double-click-distance", name) == 0)
+    {
+      //gint i = MAX(GetSystemMetrics (SM_CXDOUBLECLK), GetSystemMetrics (SM_CYDOUBLECLK));
+      //GDK_NOTE(MISC, g_print("gdk_screen_get_setting(\"%s\") : %d\n", name, i));
+      //g_value_set_int (value, i);
+      return FALSE;
+    }
+  else if (strcmp ("gtk-dnd-drag-threshold", name) == 0)
+    {
+      //gint i = MAX(GetSystemMetrics (SM_CXDRAG), GetSystemMetrics (SM_CYDRAG));
+      //GDK_NOTE(MISC, g_print("gdk_screen_get_setting(\"%s\") : %d\n", name, i));
+      //g_value_set_int (value, i);
+      return FALSE;
+    }
+  else if (strcmp ("gtk-split-cursor", name) == 0)
+    {
+      GDK_NOTE(MISC, g_print("gdk_screen_get_setting(\"%s\") : FALSE\n", name));
+      g_value_set_boolean (value, FALSE);
+      return TRUE;
+    }
+  else if (strcmp ("gtk-alternative-button-order", name) == 0)
+    {
+      GDK_NOTE(MISC, g_print("gdk_screen_get_setting(\"%s\") : TRUE\n", name));
+      g_value_set_boolean (value, TRUE);
+      return TRUE;
+    }
+  else if (strcmp ("gtk-alternative-sort-arrows", name) == 0)
+    {
+      GDK_NOTE(MISC, g_print("gdk_screen_get_setting(\"%s\") : TRUE\n", name));
+      g_value_set_boolean (value, TRUE);
+      return TRUE;
+    }
+#if 0
+  /*
+   * With 'MS Sans Serif' as windows menu font (default on win98se) you'll get a 
+   * bunch of :
+   *   WARNING **: Couldn't load font "MS Sans Serif 8" falling back to "Sans 8"
+   * at least with testfilechooser (regardless of the bitmap check below)
+   * so just disabling this code seems to be the best we can do --hb
+   */
+  else if (strcmp ("gtk-font-name", name) == 0)
+    {
+      NONCLIENTMETRICS ncm;
+      ncm.cbSize = sizeof(NONCLIENTMETRICS);
+      if (SystemParametersInfo (SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, FALSE))
+        {
+          /* Pango finally uses GetDeviceCaps to scale, we use simple
+	   * approximation here.
+	   */
+          int nHeight = (0 > ncm.lfMenuFont.lfHeight ? -3*ncm.lfMenuFont.lfHeight/4 : 10);
+          if (OUT_STRING_PRECIS == ncm.lfMenuFont.lfOutPrecision)
+            GDK_NOTE(MISC, g_print("gdk_screen_get_setting(%s) : ignoring bitmap font '%s'\n", 
+                                   name, ncm.lfMenuFont.lfFaceName));
+          else if (ncm.lfMenuFont.lfFaceName && strlen(ncm.lfMenuFont.lfFaceName) > 0 &&
+                   /* Avoid issues like those described in bug #135098 */
+                   g_utf8_validate (ncm.lfMenuFont.lfFaceName, -1, NULL))
+            {
+              char* s = g_strdup_printf ("%s %d", ncm.lfMenuFont.lfFaceName, nHeight);
+              GDK_NOTE(MISC, g_print("gdk_screen_get_setting(%s) : %s\n", name, s));
+              g_value_set_string (value, s);
+
+              g_free(s);
+              return TRUE;
+            }
+        }
+    }
+#endif
+
   return FALSE;
 }
 

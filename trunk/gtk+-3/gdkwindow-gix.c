@@ -207,7 +207,7 @@ _gdk_gix_screen_create_root_window (GdkScreen *screen,
   /* see init_randr_support() in gdkscreen-gix.c */
   window->event_mask = GDK_STRUCTURE_MASK;
 
-  _gdk_gix_display_add_window (gix_screen->scr_display,
+  _gdk_gix_display_add_window (_gdk_display,
                                &gix_screen->xroot_window,
                                gix_screen->root_window);
 
@@ -418,14 +418,14 @@ _gdk_gix_display_create_window_impl (GdkDisplay    *display,
 	//impl->drawable.format = gi_screen_format();
 
 	g_object_ref (window);
-	_gdk_gix_display_add_window (gix_screen->scr_display, &impl->window_id, window);
+	_gdk_gix_display_add_window (_gdk_display, &impl->window_id, window);
 
   if (attributes_mask & GDK_WA_TYPE_HINT)
     gdk_window_set_type_hint (window, attributes->type_hint);
 
   gdk_gix_event_source_select_events ((GdkEventSource *) display_gix->event_source,
 		  GDK_WINDOW_XID (window), event_mask,
-		  GI_MASK_CONFIGURENOTIFY | GI_MASK_PROPERTYNOTIFY);
+		  GI_MASK_CONFIGURENOTIFY | GI_MASK_PROPERTYNOTIFY|GI_MASK_SELECTIONNOTIFY);
 
   /* Add window handle to title */
   //GDK_NOTE (MISC_OR_EVENTS, );
@@ -912,7 +912,7 @@ gdk_gix_window_destroy (GdkWindow *window,
       if (GDK_WINDOW_IMPL_GIX (window->impl)->window_id)
 	    gi_destroy_window(GDK_WINDOW_IMPL_GIX (window->impl)->window_id);
     }
-  _gdk_gix_display_remove_window (GDK_WINDOW_DISPLAY (window), impl->window_id);
+  _gdk_gix_display_remove_window (_gdk_display, impl->window_id);
 }
 
 static void
@@ -1842,7 +1842,7 @@ gdk_gix_window_destroy_notify (GdkWindow *window)
       if (GDK_WINDOW_TYPE(window) != GDK_WINDOW_FOREIGN)
 	g_warning ("GdkWindow %p unexpectedly destroyed", window);
 
-    _gdk_gix_display_remove_window (GDK_WINDOW_DISPLAY (window), 
+    _gdk_gix_display_remove_window (_gdk_display, 
 		GDK_WINDOW_XID (window) );
       _gdk_window_destroy (window, TRUE);
     }
@@ -1962,7 +1962,7 @@ _gdk_window_impl_gix_class_init (GdkWindowImplGixClass *klass)
   impl_class->get_events = gdk_window_gix_get_events;
   impl_class->raise = gdk_window_gix_raise;
   impl_class->lower = gdk_window_gix_lower;
-  impl_class->restack_under = gdk_window_gix_restack_under;
+  //impl_class->restack_under = gdk_window_gix_restack_under;
   impl_class->restack_toplevel = gdk_window_gix_restack_toplevel;
   impl_class->move_resize = gdk_window_gix_move_resize;
   impl_class->set_background = gdk_window_gix_set_background;
@@ -1993,7 +1993,7 @@ _gdk_window_impl_gix_class_init (GdkWindowImplGixClass *klass)
   impl_class->set_geometry_hints = gdk_gix_window_set_geometry_hints;
   impl_class->set_title = gdk_gix_window_set_title;
   impl_class->set_role = gdk_gix_window_set_role;
-  impl_class->set_startup_id = gdk_gix_window_set_startup_id;
+  //impl_class->set_startup_id = gdk_gix_window_set_startup_id;
   impl_class->set_transient_for = gdk_gix_window_set_transient_for;
   impl_class->get_root_origin = gdk_gix_window_get_root_origin;
   impl_class->get_frame_extents = gdk_gix_window_get_frame_extents;
@@ -2022,16 +2022,20 @@ _gdk_window_impl_gix_class_init (GdkWindowImplGixClass *klass)
   impl_class->enable_synchronized_configure = gdk_gix_window_enable_synchronized_configure;
   impl_class->configure_finished = gdk_gix_window_configure_finished;
   impl_class->set_opacity = gdk_gix_window_set_opacity;
-  impl_class->set_composited = gdk_gix_window_set_composited;
+  //impl_class->set_composited = gdk_gix_window_set_composited;
   impl_class->destroy_notify = gdk_gix_window_destroy_notify;
-  impl_class->get_drag_protocol = _gdk_gix_window_get_drag_protocol;
+  //impl_class->get_drag_protocol = _gdk_gix_window_get_drag_protocol;
   impl_class->register_dnd = _gdk_gix_window_register_dnd;
   impl_class->drag_begin = _gdk_gix_window_drag_begin;
   impl_class->process_updates_recurse = gdk_gix_window_process_updates_recurse;
-  impl_class->sync_rendering = gdk_gix_window_sync_rendering;
+  //impl_class->sync_rendering = gdk_gix_window_sync_rendering;
   impl_class->simulate_key = gdk_gix_window_simulate_key;
   impl_class->simulate_button = gdk_gix_window_simulate_button;
   impl_class->get_property = gdk_gix_window_get_property;
   impl_class->change_property = gdk_gix_window_change_property;
   impl_class->delete_property = gdk_gix_window_delete_property;
+
+  //impl_quartz_class->get_context = gdk_window_impl_quartz_get_context;
+  //impl_quartz_class->release_context = gdk_window_impl_quartz_release_context;
+
 }

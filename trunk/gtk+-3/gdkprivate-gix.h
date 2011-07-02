@@ -52,12 +52,12 @@ struct _GdkGixCursorClass
 };
 
 
-#define GDK_TYPE_DEVICE_CORE         (gdk_device_core_get_type ())
-#define GDK_DEVICE_CORE(o)           (G_TYPE_CHECK_INSTANCE_CAST ((o), GDK_TYPE_DEVICE_CORE, GdkDeviceCore))
-#define GDK_DEVICE_CORE_CLASS(c)     (G_TYPE_CHECK_CLASS_CAST ((c), GDK_TYPE_DEVICE_CORE, GdkDeviceCoreClass))
-#define GDK_IS_DEVICE_CORE(o)        (G_TYPE_CHECK_INSTANCE_TYPE ((o), GDK_TYPE_DEVICE_CORE))
-#define GDK_IS_DEVICE_CORE_CLASS(c)  (G_TYPE_CHECK_CLASS_TYPE ((c), GDK_TYPE_DEVICE_CORE))
-#define GDK_DEVICE_CORE_GET_CLASS(o) (G_TYPE_INSTANCE_GET_CLASS ((o), GDK_TYPE_DEVICE_CORE, GdkDeviceCoreClass))
+#define GDK_TYPE_DEVICE_GIX         (gdk_device_gix_get_type ())
+#define GDK_DEVICE_GIX(o)           (G_TYPE_CHECK_INSTANCE_CAST ((o), GDK_TYPE_DEVICE_GIX, GdkDeviceCore))
+#define GDK_DEVICE_GIX_CLASS(c)     (G_TYPE_CHECK_CLASS_CAST ((c), GDK_TYPE_DEVICE_GIX, GdkDeviceCoreClass))
+#define GDK_IS_DEVICE_GIX(o)        (G_TYPE_CHECK_INSTANCE_TYPE ((o), GDK_TYPE_DEVICE_GIX))
+#define GDK_IS_DEVICE_GIX_CLASS(c)  (G_TYPE_CHECK_CLASS_TYPE ((c), GDK_TYPE_DEVICE_GIX))
+#define GDK_DEVICE_GIX_GET_CLASS(o) (G_TYPE_INSTANCE_GET_CLASS ((o), GDK_TYPE_DEVICE_GIX, GdkDeviceCoreClass))
 
 typedef struct _GdkDeviceCore GdkDeviceCore;
 typedef struct _GdkDeviceCoreClass GdkDeviceCoreClass;
@@ -210,20 +210,13 @@ struct _GdkScreenGix
 {
   GdkScreen parent_instance;
 
-  GdkDisplay *scr_display;
+  //GdkDisplay *scr_display;
   GdkWindow *root_window;
 
   int width, height;
   int width_mm, height_mm;
   gi_window_id_t xroot_window;
 
-
-  /* Visual Part */
-  //GdkVisual *argb_visual;
-  //GdkVisual *premultiplied_argb_visual;
-  //GdkVisual *rgb_visual;
-
-  /* Xinerama/RandR 1.2 */
   gint		     n_monitors;
   GdkGixMonitor *monitors;
   gint               primary_monitor;
@@ -250,7 +243,7 @@ struct _GdkGixMonitor
 
 #define GDK_SCREEN_DISPLAY(screen)    (GDK_SCREEN_GIX (screen)->display)
 #define GDK_WINDOW_SCREEN(win)	      (gdk_window_get_screen (win))
-#define GDK_WINDOW_DISPLAY(win)       (GDK_SCREEN_GIX (GDK_WINDOW_SCREEN (win))->scr_display)
+//#define GDK_WINDOW_DISPLAY(win)       (GDK_SCREEN_GIX (GDK_WINDOW_SCREEN (win))->scr_display)
 #define GDK_WINDOW_IS_GIX(win)    (GDK_IS_WINDOW_IMPL_GIX (((GdkWindow *)win)->impl))
 
 GType _gdk_gix_window_get_type    (void);
@@ -364,6 +357,9 @@ GdkWindow *
 gdk_gix_window_lookup_for_display (GdkDisplay *display,
                                    gi_window_id_t      window);
 
+GdkAtom
+gdk_x11_xatom_to_atom_for_display (GdkDisplay *display,
+				   gi_atom_id_t	       xatom);
 
 extern GdkDisplay *_gdk_display;
 extern GdkScreen *_gdk_screen;

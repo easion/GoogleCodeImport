@@ -118,9 +118,9 @@ gdk_gix_screen_get_display (GdkScreen *screen)
 {
   g_return_val_if_fail (GDK_IS_SCREEN (screen), NULL);
 
-  //return _gdk_display;
+  return _gdk_display;
 
-  return GDK_SCREEN_GIX (screen)->scr_display;
+  //return GDK_SCREEN_GIX (screen)->scr_display;
 }
 
 static gint
@@ -267,7 +267,7 @@ static gchar *
 gdk_gix_screen_make_display_name (GdkScreen *screen)
 {
   //return NULL;
-  return g_strdup (gdk_display_get_name (GDK_SCREEN_GIX (screen)->scr_display));
+  return g_strdup (gdk_display_get_name (_gdk_display));
 }
 
 static GdkWindow *
@@ -554,7 +554,7 @@ _gdk_windowing_window_init (GdkDisplay *display, GdkScreen *screen)
   //screen = g_object_new (GDK_TYPE_SCREEN_GIX, NULL);
 
   screen_gix = GDK_SCREEN_GIX (screen);
-  screen_gix->scr_display = display;
+  //screen_gix->scr_display = display;
   screen_gix->width = gi_screen_width();
   screen_gix->height = gi_screen_height();
   screen_gix->xroot_window = GI_DESKTOP_WINDOW_ID;

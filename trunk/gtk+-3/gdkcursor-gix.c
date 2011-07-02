@@ -207,7 +207,6 @@ _gdk_gix_display_get_cursor_for_pixbuf(GdkDisplay *gdk_display, GdkPixbuf *pixbu
   }
 
   gi_destroy_image(curosr_image);
-
   //gi_create_cursor_image(gi_window_id_t wid, int x, int y, gi_image_t* img);
   return GDK_CURSOR (cursor);
 

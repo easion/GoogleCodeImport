@@ -33,18 +33,15 @@ static void
 _gdk_input_init (GdkDisplay *display)
 {
   GdkDisplayGix *display_gix;
-  //GdkDeviceManager *device_manager;
   GdkDeviceManagerGix *gix_device_manager;
   GdkDevice *device;
   GList *list, *l;
 
   display_gix = GDK_DISPLAY_GIX (display);
  
-  //gdk_display_get_device_manager (display);
   gix_device_manager = g_object_new (GDK_TYPE_DEVICE_MANAGER_GIX,
                        "display", display,
                        NULL);
-  //display->device_manager =device_manager;
   display->device_manager = GDK_DEVICE_MANAGER (gix_device_manager);
   display->core_pointer = gix_device_manager->core_pointer;
   
@@ -113,8 +110,6 @@ _gdk_gix_display_open (const gchar *display_name)
       GDK_NOTE (MISC, g_print ("... return NULL\n"));
       return NULL;
     }
-
-  //g_print("_gdk_gix_display_open %s\n", display_name?display_name:"NULL");
 
   _gdk_display =  g_object_new (GDK_TYPE_DISPLAY_GIX, NULL);
    _gdk_screen = g_object_new (GDK_TYPE_SCREEN_GIX, NULL);
@@ -212,7 +207,6 @@ gdk_gix_display_get_screen (GdkDisplay *display,
   g_return_val_if_fail (GDK_IS_DISPLAY (display), NULL);
   g_return_val_if_fail (screen_num == 0, NULL);
 
-  //return GDK_DISPLAY_GIX (display)->display_screen;
   return _gdk_screen;
 }
 
@@ -284,7 +278,6 @@ gdk_gix_display_supports_selection_notification (GdkDisplay *display)
 static gboolean
 gdk_gix_display_request_selection_notification (GdkDisplay *display,
 						    GdkAtom     selection)
-
 {
     return FALSE;
 }
@@ -397,7 +390,6 @@ gdk_gix_display_broadcast_startup_message (GdkDisplay *display,
   va_end (ap);
 
   //printf ("startup message: %s\n", message->str);
-
   g_string_free (message, TRUE);
 }
 

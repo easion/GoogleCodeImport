@@ -260,11 +260,10 @@ generate_configure_event (gi_msg_t       *msg,
     return NULL;
   }
 
-  window->width = msg->body.rect.w;
-  window->height = msg->body.rect.h;
-
   window->x = msg->body.rect.x;
   window->y = msg->body.rect.y;
+  window->width = msg->body.rect.w;
+  window->height = msg->body.rect.h;
 
   _gdk_window_update_size (window);
 
@@ -493,7 +492,7 @@ generate_key_event(GdkDeviceManager *device_manager, gi_msg_t *msg, GdkWindow *w
 	/* Build a key press event */
 	//event = gdk_event_new (GDK_KEY_PRESS);
 	event = gdk_event_new (msg->type == GI_MSG_KEY_DOWN ? 
-    GDK_KEY_PRESS : GDK_KEY_RELEASE);
+      GDK_KEY_PRESS : GDK_KEY_RELEASE);
 
 	event->key.window = window;
 	//gdk_event_set_device (event, GDK_DEVICE_MANAGER_WIN32 (device_manager)->core_keyboard);
@@ -522,8 +521,6 @@ generate_key_event(GdkDeviceManager *device_manager, gi_msg_t *msg, GdkWindow *w
 					     NULL, NULL, NULL);
   printf("do get hardware_keycode %d,%d,%d\n",
 	   msg->params[3],event->key.hardware_keycode, event->key.keyval);
-
-  //event->key.keyval =  msg->params[3];
 
   gdk_event_set_device (event, device);
   fill_key_event_string (event); 
@@ -577,35 +574,6 @@ find_window_for_mouse_event (GdkWindow* reported_window,
   if (other_window == NULL)
     return _gdk_root;
 
-  /*points = MAKEPOINTS (msg->lParam);
-  pt.x = points.x;
-  pt.y = points.y;
-  ClientToScreen (msg->hwnd, &pt);
-
-  hwnd = WindowFromPoint (pt);
-
-  if (hwnd != NULL)
-    {
-      RECT rect;
-
-      GetClientRect (hwnd, &rect);
-      ScreenToClient (hwnd, &pt);
-      if (!PtInRect (&rect, pt))
-	return _gdk_root;
-
-      other_window = gdk_gix_window_lookup_for_display (hwnd);
-    }
-
-  if (other_window == NULL)
-    return _gdk_root;
-
-  pt.x = points.x;
-  pt.y = points.y;
-  ClientToScreen (msg->hwnd, &pt);
-  ScreenToClient (GDK_WINDOW_HWND (other_window), &pt);
-  msg->lParam = MAKELPARAM (pt.x, pt.y);
-  */
-
   return other_window;
 }
 
@@ -625,7 +593,6 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
 
   device_manager = gdk_display_get_device_manager (display);
   g_assert(device_manager != NULL);
-  //device_manager_core = (GdkDeviceManagerGix *) device_manager;
 
   g_return_val_if_fail (g_event != NULL, NULL);
 
@@ -809,7 +776,7 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
     event->motion.axes = NULL;
     _gdk_gix_modifiers = build_pointer_event_state (
       g_event->params[2], g_event->params[3]);
-    event->motion.state = 0;//_gdk_gix_modifiers;
+    event->motion.state = _gdk_gix_modifiers;
     event->motion.is_hint = FALSE;
     gdk_event_set_device (event, _gdk_display->core_pointer);  
   }
@@ -931,8 +898,59 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
 
   case GI_MSG_CREATENOTIFY:
   break;
+
   case GI_MSG_PROPERTYNOTIFY:
+	  if (window->event_mask & GDK_PROPERTY_CHANGE_MASK)
+	{
+	  event = gdk_event_new(GDK_NOTHING);
+	  event->property.type = GDK_PROPERTY_NOTIFY;
+	  event->property.window = window;
+	  event->property.atom = gdk_x11_xatom_to_atom_for_display (display, g_event->params[1]);
+	  event->property.time = g_event->params[2];
+	  event->property.state = g_event->params[0];
+	}
+	else{
+		event = NULL;
+	}
   break;
+  case GI_MSG_SELECTIONNOTIFY:
+	  event = gdk_event_new(GDK_NOTHING);
+
+	  if (g_event->params[0] == G_SEL_NOTIFY){
+	  event->selection.type = GDK_SELECTION_NOTIFY;
+      event->selection.window = window;
+      event->selection.selection = gdk_x11_xatom_to_atom_for_display (display, g_event->params[3]);
+      event->selection.target = gdk_x11_xatom_to_atom_for_display (display, g_event->body.message[0]);
+      if (g_event->params[3] == 0)
+        event->selection.property = GDK_NONE;
+      else
+        event->selection.property = gdk_x11_xatom_to_atom_for_display (display, g_event->params[3]);
+      event->selection.time = g_event->params[1];
+
+		}
+	  else if (g_event->params[0] ==G_SEL_REQUEST)
+	  {
+	  event->selection.type = GDK_SELECTION_REQUEST;
+      event->selection.window = window;
+      event->selection.selection = gdk_x11_xatom_to_atom_for_display (display, g_event->params[3]);
+      event->selection.target = gdk_x11_xatom_to_atom_for_display (display, g_event->body.message[0]);
+      event->selection.property = gdk_x11_xatom_to_atom_for_display (display, g_event->body.message[1]);
+      if (g_event->params[2] != 0)
+        event->selection.requestor = gdk_x11_window_foreign_new_for_display (display,
+                                                                             g_event->params[2]);
+      else
+        event->selection.requestor = NULL;
+      event->selection.time = g_event->body.message[2];
+	  }
+	  else if (g_event->params[0] ==G_SEL_CLEAR)
+	  {
+		  event->selection.type = GDK_SELECTION_CLEAR;
+	  event->selection.window = window;
+	  event->selection.selection = gdk_x11_xatom_to_atom_for_display (display, g_event->params[3]);
+	  event->selection.time = g_event->params[1];
+	  }
+	 break;
+
   case GI_MSG_REPARENT:
   break;
 

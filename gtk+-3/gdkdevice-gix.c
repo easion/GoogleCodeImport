@@ -9,7 +9,7 @@
 #include "gdkkeysyms.h"
 #include "gdkprivate-gix.h"
 
-G_DEFINE_TYPE (GdkDeviceCore, gdk_device_core, GDK_TYPE_DEVICE)
+G_DEFINE_TYPE (GdkDeviceCore, gdk_device_gix, GDK_TYPE_DEVICE)
 
 G_DEFINE_TYPE (GdkDeviceManagerGix,
 	       gdk_device_manager_core, GDK_TYPE_DEVICE_MANAGER)
@@ -19,7 +19,7 @@ G_DEFINE_TYPE (GdkDeviceManagerGix,
 /***********************************************************/
 
 static gboolean
-gdk_device_core_get_history (GdkDevice      *device,
+gdk_device_gix_get_history (GdkDevice      *device,
                              GdkWindow      *window,
                              guint32         start,
                              guint32         stop,
@@ -30,7 +30,7 @@ gdk_device_core_get_history (GdkDevice      *device,
 }
 
 static void
-gdk_device_core_get_state (GdkDevice       *device,
+gdk_device_gix_get_state (GdkDevice       *device,
                            GdkWindow       *window,
                            gdouble         *axes,
                            GdkModifierType *mask)
@@ -47,7 +47,7 @@ gdk_device_core_get_state (GdkDevice       *device,
 }
 
 static void
-gdk_device_core_set_window_cursor (GdkDevice *device,
+gdk_device_gix_set_window_cursor (GdkDevice *device,
                                    GdkWindow *window,
                                    GdkCursor *cursor)
 {
@@ -60,7 +60,6 @@ gdk_device_core_set_window_cursor (GdkDevice *device,
       id = _gdk_gix_cursor_get_id(cursor, &x, &y);
 	  gi_load_cursor(GDK_WINDOW_WIN_ID(window), id);
 	  LOG_UNUSED;
-      //wl_input_device_attach(wd->device, wd->time, buffer, x, y);
     }
   else
     {
@@ -68,13 +67,12 @@ gdk_device_core_set_window_cursor (GdkDevice *device,
 	  id = GI_CURSOR_ARROW;
 	  //id = GI_CURSOR_NONE;
 	  gi_load_cursor(GDK_WINDOW_WIN_ID(window), id);
-      //wl_input_device_attach(wd->device, wd->time, NULL, 0, 0);
     }
 }
 
 
 static GdkWindow *
-gdk_device_core_window_at_position (GdkDevice       *device,
+gdk_device_gix_window_at_position (GdkDevice       *device,
                                     gint            *win_x,
                                     gint            *win_y,
                                     GdkModifierType *mask,
@@ -82,30 +80,21 @@ gdk_device_core_window_at_position (GdkDevice       *device,
 {
   GdkDisplay *display;
   GdkScreen *screen;
-  //Display *xdisplay;
   GdkWindow *window;
   gi_window_id_t xwindow,  child;
   int xroot_x, xroot_y, xwin_x, xwin_y;
   unsigned int xmask;
 
   display = gdk_device_get_display (device);
-  screen = gdk_display_get_default_screen (display);
-  
+  screen = gdk_display_get_default_screen (display);  
 
-  //xdisplay = GDK_SCREEN_XDISPLAY (screen);
   xwindow = GDK_SCREEN_XROOTWIN (screen);
-
   
   gi_query_pointer ( xwindow,
 				 &child,
 				 &xroot_x, &xroot_y,
 				 &xwin_x, &xwin_y,
 				 &xmask);
-
-  //if (root == xwindow)
-	//xwindow = child;
-  //else
-	//xwindow = root;
 
   window = gdk_gix_window_lookup_for_display (display, child);
 
@@ -124,7 +113,7 @@ gdk_device_core_window_at_position (GdkDevice       *device,
 
 
 static gboolean
-gdk_device_core_query_state (GdkDevice        *device,
+gdk_device_gix_query_state (GdkDevice        *device,
                              GdkWindow        *window,
                              GdkWindow       **root_window,
                              GdkWindow       **child_window,
@@ -180,7 +169,7 @@ gdk_device_core_query_state (GdkDevice        *device,
 
 
 static void
-gdk_device_core_warp (GdkDevice *device,
+gdk_device_gix_warp (GdkDevice *device,
                       GdkScreen *screen,
                       gint       x,
                       gint       y)
@@ -201,6 +190,7 @@ const int _gdk_gix_event_mask_table[21] =
   GI_MASK_BUTTON_DOWN,
   GI_MASK_BUTTON_UP,
   GI_MASK_KEY_DOWN,
+
   GI_MASK_KEY_UP,
   GI_MASK_MOUSE_ENTER,
   GI_MASK_MOUSE_EXIT,
@@ -211,6 +201,7 @@ const int _gdk_gix_event_mask_table[21] =
   0,                    /* PROXIMITY_IN */
   0,                    /* PROXIMTY_OUT */
   GI_MASK_CONFIGURENOTIFY,
+
   GI_MASK_BUTTON_DOWN      /* SCROLL; on X mouse wheel events is treated as mouse button 4/5 */
 };
 
@@ -240,7 +231,7 @@ gdk_gix_event_source_select_events (GdkEventSource *source,
 
 
 static GdkGrabStatus
-gdk_device_core_grab (GdkDevice    *device,
+gdk_device_gix_grab (GdkDevice    *device,
                       GdkWindow    *window,
                       gboolean      owner_events,
                       GdkEventMask  event_mask,
@@ -279,15 +270,7 @@ gdk_device_core_grab (GdkDevice    *device,
       guint xevent_mask;
       gint i;
 
-      /* Device is a pointer */
-      /*if (!cursor)
-        xcursor = None;
-      else
-        {
-          _gdk_x11_cursor_update_theme (cursor);
-          xcursor = gdk_x11_cursor_get_xcursor (cursor);
-        }*/
-
+      /* Device is a pointer */   
       xevent_mask = 0;
 
       for (i = 0; i < _gdk_gix_event_mask_table_size; i++)
@@ -311,12 +294,11 @@ gdk_device_core_grab (GdkDevice    *device,
 
   //_gdk_x11_display_update_grab_info (display, device, status);
   //return _gdk_x11_convert_grab_status (status);
-
   return GDK_GRAB_SUCCESS;
 }
 
 static void
-gdk_device_core_ungrab (GdkDevice *device,
+gdk_device_gix_ungrab (GdkDevice *device,
                         guint32    time_)
 {
   GdkDisplay *display;
@@ -339,7 +321,7 @@ gdk_device_core_ungrab (GdkDevice *device,
 }
 
 static void
-gdk_device_core_select_window_events (GdkDevice    *device,
+gdk_device_gix_select_window_events (GdkDevice    *device,
                                       GdkWindow    *window,
                                       GdkEventMask  event_mask)
 {
@@ -347,23 +329,23 @@ gdk_device_core_select_window_events (GdkDevice    *device,
 /***********************************************************/
 
 static void
-gdk_device_core_class_init (GdkDeviceCoreClass *klass)
+gdk_device_gix_class_init (GdkDeviceCoreClass *klass)
 {
   GdkDeviceClass *device_class = GDK_DEVICE_CLASS (klass);
 
-  device_class->get_history = gdk_device_core_get_history;
-  device_class->get_state = gdk_device_core_get_state;
-  device_class->set_window_cursor = gdk_device_core_set_window_cursor;
-  device_class->warp = gdk_device_core_warp;
-  device_class->query_state = gdk_device_core_query_state;
-  device_class->grab = gdk_device_core_grab;
-  device_class->ungrab = gdk_device_core_ungrab;
-  device_class->window_at_position = gdk_device_core_window_at_position;
-  device_class->select_window_events = gdk_device_core_select_window_events;
+  device_class->get_history = gdk_device_gix_get_history;
+  device_class->get_state = gdk_device_gix_get_state;
+  device_class->set_window_cursor = gdk_device_gix_set_window_cursor;
+  device_class->warp = gdk_device_gix_warp;
+  device_class->query_state = gdk_device_gix_query_state;
+  device_class->grab = gdk_device_gix_grab;
+  device_class->ungrab = gdk_device_gix_ungrab;
+  device_class->window_at_position = gdk_device_gix_window_at_position;
+  device_class->select_window_events = gdk_device_gix_select_window_events;
 }
 
 static void
-gdk_device_core_init (GdkDeviceCore *device_core)
+gdk_device_gix_init (GdkDeviceCore *device_core)
 {
   GdkDevice *device;
 
@@ -399,7 +381,7 @@ gdk_device_manager_core_class_init (GdkDeviceManagerGixClass *klass)
 static GdkDevice *
 create_core_pointer (GdkDeviceManager *device_manager,GdkDisplay       *display)
 {
-  return g_object_new (GDK_TYPE_DEVICE_CORE,
+  return g_object_new (GDK_TYPE_DEVICE_GIX,
                        "name", "Core Pointer",
                        "type", GDK_DEVICE_TYPE_MASTER,
                        "input-source", GDK_SOURCE_MOUSE,
@@ -413,7 +395,7 @@ create_core_pointer (GdkDeviceManager *device_manager,GdkDisplay       *display)
 static GdkDevice *
 create_core_keyboard (GdkDeviceManager *device_manager,GdkDisplay       *display)
 {
-  return g_object_new (GDK_TYPE_DEVICE_CORE,
+  return g_object_new (GDK_TYPE_DEVICE_GIX,
                        "name", "Core Keyboard",
                        "type", GDK_DEVICE_TYPE_MASTER,
                        "input-source", GDK_SOURCE_KEYBOARD,

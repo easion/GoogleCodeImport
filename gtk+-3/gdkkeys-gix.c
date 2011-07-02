@@ -25,8 +25,6 @@
 #include "gdkdisplay-gix.h"
 #include "gdkkeysprivate.h"
 
-//#include <X11/extensions/XKBcommon.h>
-
 typedef struct _GdkGixKeymap          GdkGixKeymap;
 typedef struct _GdkGixKeymapClass     GdkGixKeymapClass;
 
@@ -241,16 +239,12 @@ set_shift_vks (guchar *key_state,
 static void
 update_keymap (void)
 {
-  //static guint current_serial = 0;
   guchar key_state[G_KEY_LAST];
-  //guint scancode;
   guint vk;
   gboolean capslock_tested = FALSE;
 
   if (keysym_tab != NULL)// && current_serial == _gdk_keymap_serial)
     return;
-
-  //current_serial = _gdk_keymap_serial;
 
   if (keysym_tab == NULL)
     keysym_tab = g_new (guint, 4*G_KEY_LAST);

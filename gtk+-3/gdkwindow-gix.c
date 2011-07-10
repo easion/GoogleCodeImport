@@ -181,6 +181,8 @@ _gdk_gix_screen_create_root_window (GdkScreen *screen,
   _gdk_root = window;
 
   window->impl = g_object_new (GDK_TYPE_WINDOW_IMPL_GIX, NULL);
+  g_assert(window->impl != NULL);
+
   window->impl_window = window;
   window->visual = gdk_screen_get_system_visual (screen);
   g_assert(window->visual != NULL);
@@ -295,6 +297,7 @@ _gdk_gix_display_create_window_impl (GdkDisplay    *display,
   display_gix = GDK_DISPLAY_GIX (display);
 
   impl = g_object_new (GDK_TYPE_WINDOW_IMPL_GIX, NULL);
+  g_assert(impl != NULL);
   window->impl = GDK_WINDOW_IMPL (impl);
   impl->wrapper =  (window);
 
@@ -434,6 +437,16 @@ _gdk_gix_display_create_window_impl (GdkDisplay    *display,
 
   if (attributes_mask & GDK_WA_CURSOR)
 	gdk_window_set_cursor (window, attributes->cursor);
+}
+
+GdkWindow *
+gdk_x11_window_foreign_new_for_display (GdkDisplay *display,
+                                        gi_window_id_t      window)
+{
+  GdkScreen *screen;
+  GdkWindow *win;
+
+  return NULL;
 }
 
 static const cairo_user_data_key_t gdk_gix_cairo_key;
@@ -861,8 +874,8 @@ gdk_gix_window_queue_antiexpose (GdkWindow *window,
 
   return TRUE;
 #endif
-  g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
-  //return FALSE;
+  //g_warning ("implemented %s: GOT line %d\n",__FUNCTION__,__LINE__);
+  return FALSE;
 }
 
 static void

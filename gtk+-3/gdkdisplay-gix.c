@@ -42,6 +42,7 @@ _gdk_input_init (GdkDisplay *display)
   gix_device_manager = g_object_new (GDK_TYPE_DEVICE_MANAGER_GIX,
                        "display", display,
                        NULL);
+  g_assert(gix_device_manager != NULL);
   display->device_manager = GDK_DEVICE_MANAGER (gix_device_manager);
   display->core_pointer = gix_device_manager->core_pointer;
   
@@ -111,8 +112,10 @@ _gdk_gix_display_open (const gchar *display_name)
       return NULL;
     }
 
-  _gdk_display =  g_object_new (GDK_TYPE_DISPLAY_GIX, NULL);
+   _gdk_display =  g_object_new (GDK_TYPE_DISPLAY_GIX, NULL);
    _gdk_screen = g_object_new (GDK_TYPE_SCREEN_GIX, NULL);
+   g_assert(_gdk_display != NULL);
+   g_assert(_gdk_screen != NULL);
  
   fd = gi_init();
   if (fd < 0) {

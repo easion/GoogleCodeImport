@@ -493,6 +493,7 @@ void _gdk_visual_init (void)
 
   //system_visual = g_object_new (GDK_TYPE_GIX_VISUAL, NULL);
   system_visual = g_object_new (GDK_TYPE_VISUAL, NULL);
+  g_assert(system_visual != NULL);
   system_visual->screen = gdk_screen_get_default();
   g_assert(system_visual->screen != NULL);
 
@@ -550,6 +551,7 @@ _gdk_windowing_window_init (GdkDisplay *display, GdkScreen *screen)
   GdkDisplayGix *display_gix;
 
   display_gix = GDK_DISPLAY_GIX (display);
+  g_assert(display_gix != NULL);
 
   //screen = g_object_new (GDK_TYPE_SCREEN_GIX, NULL);
 

@@ -162,6 +162,7 @@ _gdk_gix_window_drag_begin (GdkWindow *window,
   GdkDragContext *context;
 
   context = (GdkDragContext *) g_object_new (GDK_TYPE_GIX_DRAG_CONTEXT, NULL);
+  g_assert(context != NULL);
 
   gdk_drag_context_set_device (context, device);
 

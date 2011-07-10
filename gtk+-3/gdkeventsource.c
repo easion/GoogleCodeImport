@@ -913,6 +913,7 @@ gdk_event_translate (GdkDisplay *display, GdkEventSource *event_source,
 		event = NULL;
 	}
   break;
+
   case GI_MSG_SELECTIONNOTIFY:
 	  event = gdk_event_new(GDK_NOTHING);
 

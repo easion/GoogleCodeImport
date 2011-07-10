@@ -76,7 +76,7 @@ struct _GdkDeviceCoreClass
 
 
 
-#define GDK_TYPE_DEVICE_MANAGER_GIX         (gdk_device_manager_core_get_type ())
+#define GDK_TYPE_DEVICE_MANAGER_GIX         (gdk_device_manager_gix_get_type ())
 #define GDK_DEVICE_MANAGER_GIX(o)           (G_TYPE_CHECK_INSTANCE_CAST ((o), GDK_TYPE_DEVICE_MANAGER_GIX, GdkDeviceManagerGix))
 #define GDK_DEVICE_MANAGER_GIX_CLASS(c)     (G_TYPE_CHECK_CLASS_CAST ((c), GDK_TYPE_DEVICE_MANAGER_GIX, GdkDeviceManagerGixClass))
 #define GDK_IS_DEVICE_MANAGER_GIX(o)        (G_TYPE_CHECK_INSTANCE_TYPE ((o), GDK_TYPE_DEVICE_MANAGER_GIX))
@@ -365,5 +365,5 @@ extern GdkDisplay *_gdk_display;
 extern GdkScreen *_gdk_screen;
 extern GdkWindow *_gdk_root;
 
-#define LOG_UNUSED g_print("%s: line %d got !",__FUNCTION__,__LINE__);
+#define unimplemented g_warning ("unimplemented %s: Got Line %d\n",__FUNCTION__,__LINE__);
 #endif /* __GDK_PRIVATE_GIX_H__ */

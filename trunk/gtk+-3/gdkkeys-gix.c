@@ -770,6 +770,7 @@ _gdk_gix_keymap_new (GdkDisplay *display)
   GdkGixKeymap *keymap;
 
   keymap = g_object_new (GDK_TYPE_GIX_KEYMAP, NULL);
+  g_assert(keymap != NULL);
   GDK_KEYMAP (keymap)->display = display;
 
   update_keymap (); 

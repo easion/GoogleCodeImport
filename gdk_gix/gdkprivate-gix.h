@@ -22,12 +22,12 @@
  * file for a list of people on the GTK+ Team.
  */
 
+
 /*
  * GTK+ Gix backend
- * Copyright (C) 2001-2002  convergence integrated media GmbH
- * Copyright (C) 2002-2004  convergence GmbH
- * Written by Denis Oliver Kropp <dok@convergence.de> and
- *            Sven Neumann <sven@convergence.de>
+ * Copyright (C) 2011 www.hanxuantech.com.
+ * Written by Easion <easion@hanxuantech.com> , it's based
+ * on DirectFB port.
  */
 
 #ifndef __GDK_PRIVATE_GIX_H__
@@ -39,6 +39,7 @@
 #include "gdkcursor.h"
 #include "gdkdisplay-gix.h"
 #include "gdkregion-generic.h"
+#include <errno.h>
 #include <cairo.h>
 
 #include <string.h>
@@ -55,19 +56,33 @@
 #define GDK_IS_DRAWABLE_IMPL_GIX(object) (G_TYPE_CHECK_INSTANCE_TYPE ((object), GDK_TYPE_DRAWABLE_IMPL_GIX))
 
 #define GDK_TYPE_WINDOW_IMPL_GIX         (gdk_window_impl_gix_get_type ())
-#define GDK_WINDOW_IMPL_GIX(object)      (G_TYPE_CHECK_INSTANCE_CAST ((object), GDK_TYPE_WINDOW_IMPL_GIX, GdkWindowImplGix))
+#define GDK_WINDOW_IMPL_GIX(object)      (G_TYPE_CHECK_INSTANCE_CAST ((object), GDK_TYPE_WINDOW_IMPL_GIX, GdkWindowImplGIX))
 #define GDK_IS_WINDOW_IMPL_GIX(object)   (G_TYPE_CHECK_INSTANCE_TYPE ((object), GDK_TYPE_WINDOW_IMPL_GIX))
 
 #define GDK_TYPE_PIXMAP_IMPL_GIX         (gdk_pixmap_impl_gix_get_type ())
 #define GDK_PIXMAP_IMPL_GIX(object)      (G_TYPE_CHECK_INSTANCE_CAST ((object), GDK_TYPE_PIXMAP_IMPL_GIX, GdkPixmapImplGix))
 #define GDK_IS_PIXMAP_IMPL_GIX(object)   (G_TYPE_CHECK_INSTANCE_TYPE ((object), GDK_TYPE_PIXMAP_IMPL_GIX))
+#define GDK_GC_XGC(gc)                (gdk_x11_gc_get_xgc (gc))
+gi_gc_ptr_t       gdk_x11_gc_get_xgc               (GdkGC       *gc);
 
-//#define GDK_WINDOW_GIX_ID(win) (GDK_WINDOW_IMPL_GIX (GDK_WINDOW_OBJECT (win)->impl)->drawable.window_id)
+#if 1 //GDK_COMPILATION
 #define GDK_WINDOW_GIX_ID(win)           (GDK_DRAWABLE_IMPL_GIX(((GdkWindowObject *)win)->impl)->window_id)
 #define GDK_PIXMAP_GIX_ID(win)           (GDK_DRAWABLE_IMPL_GIX(((GdkPixmapObject *)win)->impl)->window_id)
+#else
+#define GDK_WINDOW_GIX_ID(win)           (gdk_x11_drawable_get_xid (win))
+#endif
+
+#define GDK_DRAWABLE_GIX_ID(win)         (GDK_IS_WINDOW (win) ? GDK_WINDOW_GIX_ID (win) : GDK_PIXMAP_GIX_ID (win))
+
+
+#ifdef DEBUG
+#define D_DEBUG_AT(format, argc...) g_print(format, ##argc)	
+#else
+# define D_DEBUG_AT(format, args...)    do { } while(0)
+#endif
 
 typedef struct _GdkDrawableImplGix GdkDrawableImplGix;
-typedef struct _GdkWindowImplGix   GdkWindowImplGix;
+typedef struct _GdkWindowImplGIX   GdkWindowImplGIX;
 typedef struct _GdkPixmapImplGix   GdkPixmapImplGix;
 
 
@@ -92,8 +107,7 @@ struct _GdkDrawableImplGix
   
   gi_window_id_t window_id;
 
-  //IGixSurface       *surface;
-  //DFBSurfacePixelFormat   format;
+  
   unsigned format;
   cairo_surface_t *  cairo_surface;
 
@@ -156,12 +170,15 @@ struct _GdkXPositionInfo
 				 * unset during resizing and scaling */
   GdkRectangle clip_rect;	/* visible rectangle of window */
 };
-struct _GdkWindowImplGix
+struct _GdkWindowImplGIX
 {
   GdkDrawableImplGix drawable;
   GdkWindow             *gdkWindow;
 
-//  GdkXPositionInfo position_info; 
+  gint width;
+  gint height;
+
+  GdkXPositionInfo position_info; 
 
   GdkCursor              *cursor;
   GHashTable             *properties;
@@ -170,14 +187,12 @@ struct _GdkWindowImplGix
 
   GdkWindowTypeHint       type_hint;
 
-  //DFBUpdates              flips;
-  //DFBRegion               flip_regions[4];
 };
 
 typedef struct
 {
   GdkDrawableImplGixClass parent_class;
-} GdkWindowImplGixClass;
+} GdkWindowImplGIXClass;
 
 GType gdk_window_impl_gix_get_type        (void);
 
@@ -190,10 +205,10 @@ void  _gdk_gix_calc_abs                   (GdkWindow       *window);
 GdkWindow * gdk_gix_window_find_toplevel  (GdkWindow       *window);
 
 
-void        gdk_gix_window_id_table_insert (gi_window_id_t  dfb_id,
+void        gdk_gix_window_id_table_insert (gi_window_id_t  gix_id,
                                                  GdkWindow   *window);
-void        gdk_gix_window_id_table_remove (gi_window_id_t  dfb_id);
-GdkWindow * gdk_gix_window_id_table_lookup (gi_window_id_t  dfb_id);
+void        gdk_gix_window_id_table_remove (gi_window_id_t  gix_id);
+GdkWindow * gdk_gix_window_id_table_lookup (gi_window_id_t  gix_id);
 
 void        _gdk_gix_window_get_offsets    (GdkWindow       *window,
                                                  gint            *x_offset,
@@ -220,26 +235,28 @@ typedef struct
 typedef struct
 {
   GdkVisual              visual;
-  DFBSurfacePixelFormat  format;
+  GIXSurfacePixelFormat  format;
 } GdkVisualGix;
 
 typedef struct
 {
 	gi_image_t *surface_img;
-  //IGixSurface *surface;
 } GdkImageGix;
 
-
+gi_gc_ptr_t _gdk_x11_gc_flush (GdkGC *gc);
 #define GDK_TYPE_GC_GIX       (gdk_gc_gix_get_type ())
 #define GDK_GC_GIX(object)    (G_TYPE_CHECK_INSTANCE_CAST ((object), GDK_TYPE_GC_GIX, GdkGCGix))
 #define GDK_IS_GC_GIX(object) (G_TYPE_CHECK_INSTANCE_TYPE ((object), GDK_TYPE_GC_GIX))
-#define GDK_GC_GET_XGC(gc)	      (GDK_GC_GIX(gc)->gix_gc)
+
+//#define GDK_GC_GET_XGC(gc)	       (((GdkGCGix *)(gc))->gix_gc)
+#define GDK_GC_GET_XGC(gc)	      (GDK_GC_GIX(gc)->dirty_mask ? _gdk_x11_gc_flush (gc) : ((GdkGCGix *)(gc))->gix_gc)
+//#define USE_GC_BODY_REGION 1
 
 typedef struct
 {
   GdkGC             parent_instance;
   guint16 dirty_mask;
-#if 0
+#ifndef USE_GC_BODY_REGION
   guint have_clip_region : 1;
   guint have_clip_mask : 1;
   guint depth : 8;
@@ -324,7 +341,7 @@ void        gdk_gix_mouse_get_info    (gint            *x,
 /*  Global variables  */
 /**********************/
 
-extern GdkDisplayDFB *_gdk_display;
+extern GdkDisplayGIX *_gdk_display;
 
 /* Pointer grab info */
 extern GdkWindow           * _gdk_gix_pointer_grab_window;
@@ -455,7 +472,12 @@ temp_region_deinit( GdkRegion *region )
 }
 
 
-#define GDKDFB_RECTANGLE_VALS_FROM_BOX(s)   (s)->x1, (s)->y1, (s)->x2-(s)->x1, (s)->y2-(s)->y1
+#define GDKGIX_RECTANGLE_VALS_FROM_BOX(s)   (s)->x1, (s)->y1, (s)->x2-(s)->x1, (s)->y2-(s)->y1
 
-
+GdkAtom gdk_x11_xatom_to_atom_for_display (GdkDisplay *display,
+				   gi_atom_id_t	       xatom);
+gint build_pointer_event_state (unsigned button_flags, unsigned key_flags);
+void _gdk_window_process_expose (GdkWindow    *window,
+			    gulong        serial,
+			    GdkRectangle *area);
 #endif /* __GDK_PRIVATE_GIX_H__ */

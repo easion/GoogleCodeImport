@@ -17,17 +17,12 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/*
- * Modified by the GTK+ Team and others 1997-2000.  See the AUTHORS
- * file for a list of people on the GTK+ Team.
- */
 
 /*
  * GTK+ Gix backend
- * Copyright (C) 2001-2002  convergence integrated media GmbH
- * Copyright (C) 2002-2004  convergence GmbH
- * Written by Denis Oliver Kropp <dok@convergence.de> and
- *            Sven Neumann <sven@convergence.de>
+ * Copyright (C) 2011 www.hanxuantech.com.
+ * Written by Easion <easion@hanxuantech.com> , it's based
+ * on DirectFB port.
  */
 
 #undef GDK_DISABLE_DEPRECATED
@@ -115,13 +110,14 @@ gdk_gc_gix_finalize (GObject *object)
 
   if (private->gix_gc)
   {
-	  //printf("gi_destroy_gc: called %x\n",private->gix_gc->gcid);
-	  gi_destroy_gc(private->gix_gc);
+	  //g_print("gi_destroy_gc: called %x\n",private->gix_gc->gcid);
+	  gi_destroy_gc(GDK_GC_XGC (gc));
 	  private->gix_gc = NULL;
   }
-
+#ifdef USE_GC_BODY_REGION
   if (private->clip_region.numRects)
     temp_region_deinit (&private->clip_region);
+#endif
   if (private->values.clip_mask)
     g_object_unref (private->values.clip_mask);
   if (private->values.stipple)
@@ -174,169 +170,10 @@ static void
 gdk_gix_gc_get_values (GdkGC       *gc,
                             GdkGCValues *values)
 {
+  (void)GDK_GC_XGC (gc);
   *values = GDK_GC_GIX (gc)->values;
 }
 
-#if 0
-void
-_gdk_windowing_gc_get_foreground (GdkGC    *gc,
-                                  GdkColor *color)
-{
-  GdkGCGix *private;
-  private = GDK_GC_GIX (gc);
-  *color =private->values.foreground;
-
-
-}
-#endif
-
-#if 0
-static void
-gdk_gix_gc_set_values (GdkGC           *gc,
-                            GdkGCValues     *values,
-                            GdkGCValuesMask  values_mask)
-{
-  GdkGCGix *private = GDK_GC_GIX (gc);
-
-  if (values_mask & GDK_GC_FOREGROUND)
-    {
-      private->values.foreground = values->foreground;
-      private->values_mask |= GDK_GC_FOREGROUND;
-    }
-
-  if (values_mask & GDK_GC_BACKGROUND)
-    {
-      private->values.background = values->background;
-      private->values_mask |= GDK_GC_BACKGROUND;
-    }
-
-  if (values_mask & GDK_GC_FONT)
-    {
-      GdkFont *oldf = private->values.font;
-
-      private->values.font = gdk_font_ref (values->font);
-      private->values_mask |= GDK_GC_FONT;
-
-      if (oldf)
-        gdk_font_unref (oldf);
-    }
-
-  if (values_mask & GDK_GC_FUNCTION)
-    {
-      private->values.function = values->function;
-      private->values_mask |= GDK_GC_FUNCTION;
-    }
-
-  if (values_mask & GDK_GC_FILL)
-    {
-      private->values.fill = values->fill;
-      private->values_mask |= GDK_GC_FILL;
-    }
-
-  if (values_mask & GDK_GC_TILE)
-    {
-      GdkPixmap *oldpm = private->values.tile;
-
-      if (values->tile)
-        g_assert (GDK_PIXMAP_OBJECT (values->tile)->depth > 1);
-
-      private->values.tile = values->tile ? g_object_ref (values->tile) : NULL;
-      private->values_mask |= GDK_GC_TILE;
-
-      if (oldpm)
-        g_object_unref (oldpm);
-    }
-
-  if (values_mask & GDK_GC_STIPPLE)
-    {
-      GdkPixmap *oldpm = private->values.stipple;
-
-      if (values->stipple)
-        g_assert (GDK_PIXMAP_OBJECT (values->stipple)->depth == 1);
-
-      private->values.stipple = (values->stipple ?
-                                 g_object_ref (values->stipple) : NULL);
-      private->values_mask |= GDK_GC_STIPPLE;
-
-      if (oldpm)
-        g_object_unref (oldpm);
-    }
-
-  if (values_mask & GDK_GC_CLIP_MASK)
-    {
-      GdkPixmap *oldpm = private->values.clip_mask;
-
-      private->values.clip_mask = (values->clip_mask ?
-                                   g_object_ref (values->clip_mask) : NULL);
-      private->values_mask |= GDK_GC_CLIP_MASK;
-
-      if (oldpm)
-        g_object_unref (oldpm);
-
-      temp_region_reset (&private->clip_region);
-    }
-
-  if (values_mask & GDK_GC_SUBWINDOW)
-    {
-      private->values.subwindow_mode = values->subwindow_mode;
-      private->values_mask |= GDK_GC_SUBWINDOW;
-    }
-
-  if (values_mask & GDK_GC_TS_X_ORIGIN)
-    {
-      private->values.ts_x_origin = values->ts_x_origin;
-      private->values_mask |= GDK_GC_TS_X_ORIGIN;
-    }
-
-  if (values_mask & GDK_GC_TS_Y_ORIGIN)
-    {
-      private->values.ts_y_origin = values->ts_y_origin;
-      private->values_mask |= GDK_GC_TS_Y_ORIGIN;
-    }
-
-  if (values_mask & GDK_GC_CLIP_X_ORIGIN)
-    {
-      private->values.clip_x_origin = GDK_GC (gc)->clip_x_origin = values->clip_x_origin;
-      private->values_mask |= GDK_GC_CLIP_X_ORIGIN;
-    }
-
-  if (values_mask & GDK_GC_CLIP_Y_ORIGIN)
-    {
-      private->values.clip_y_origin = GDK_GC (gc)->clip_y_origin = values->clip_y_origin;
-      private->values_mask |= GDK_GC_CLIP_Y_ORIGIN;
-    }
-
-  if (values_mask & GDK_GC_EXPOSURES)
-    {
-      private->values.graphics_exposures = values->graphics_exposures;
-      private->values_mask |= GDK_GC_EXPOSURES;
-    }
-
-  if (values_mask & GDK_GC_LINE_WIDTH)
-    {
-      private->values.line_width = values->line_width;
-      private->values_mask |= GDK_GC_LINE_WIDTH;
-    }
-
-  if (values_mask & GDK_GC_LINE_STYLE)
-    {
-      private->values.line_style = values->line_style;
-      private->values_mask |= GDK_GC_LINE_STYLE;
-    }
-
-  if (values_mask & GDK_GC_CAP_STYLE)
-    {
-      private->values.cap_style = values->cap_style;
-      private->values_mask |= GDK_GC_CAP_STYLE;
-    }
-
-  if (values_mask & GDK_GC_JOIN_STYLE)
-    {
-      private->values.join_style = values->join_style;
-      private->values_mask |= GDK_GC_JOIN_STYLE;
-    }
-}
-#endif
 
 
 static void
@@ -348,8 +185,7 @@ gdk_gix_gc_set_values (GdkGC           *gc,
   int r=0,g=0,b=0;
   GdkColor color = { 0, 0, 0, 0 };
   guchar alpha = 0xFF;
-  int flags;
-
+  int flags = GI_MODE_SET;
 
   private = GDK_GC_GIX (gc);
   g_assert(private);
@@ -357,18 +193,20 @@ gdk_gix_gc_set_values (GdkGC           *gc,
   
   if (values_mask & GDK_GC_FOREGROUND)
     {
-	  
-	  
       private->values.foreground = values->foreground;
       private->values_mask |= GDK_GC_FOREGROUND;
 
 	  color = values->foreground;
+	  r = values->background.red   >> 8;
+	  g = values->background.green   >> 8;
+	  b = values->background.blue   >> 8;
+
 
 	  //gi_color_t gcolor = GI_ARGB (255,r,g,b);
 
 	  //gi_set_gc_foreground_pixel(private->gix_gc, values->foreground.pixel);
 	  //gi_set_gc_foreground(private->gix_gc, gcolor);
-	  //printf("gi_set_gc_foreground XXX = %x,%p,%x\n", gcolor, gc,values->foreground.pixel);
+	  //g_print("gi_set_gc_foreground XXX = %x,%p,%x\n", gcolor, gc,values->foreground.pixel);
     }
 	
 
@@ -386,7 +224,7 @@ gdk_gix_gc_set_values (GdkGC           *gc,
 	else{
 		gi_set_gc_background_pixel(private->gix_gc, 0);
 	   gi_set_gc_background(private->gix_gc, 0);
-		//printf("background not set\n");
+		//g_print("background not set\n");
 	}
 
   if (values_mask & GDK_GC_FONT)
@@ -522,12 +360,6 @@ gdk_gix_gc_set_values (GdkGC           *gc,
 
 	  D_UNIMPLEMENTED;
 
-      /*if (private->clip_region)
-        {
-          gdk_region_destroy (private->clip_region);
-          private->clip_region = NULL;
-        }
-		*/
     }
 
   if (values_mask & GDK_GC_SUBWINDOW)
@@ -552,14 +384,14 @@ gdk_gix_gc_set_values (GdkGC           *gc,
     {
       private->values.clip_x_origin = GDK_GC (gc)->clip_x_origin = values->clip_x_origin;
       private->values_mask |= GDK_GC_CLIP_X_ORIGIN;
-	  gi_gc_set_clip_origin(private->gix_gc,values->clip_x_origin,values->clip_y_origin);
+	  //gi_gc_set_clip_origin(private->gix_gc,values->clip_x_origin,values->clip_y_origin);
     }
 
   if (values_mask & GDK_GC_CLIP_Y_ORIGIN)
     {
       private->values.clip_y_origin = GDK_GC (gc)->clip_y_origin = values->clip_y_origin;
       private->values_mask |= GDK_GC_CLIP_Y_ORIGIN;
-	  gi_gc_set_clip_origin(private->gix_gc,values->clip_x_origin,values->clip_y_origin);
+	  //gi_gc_set_clip_origin(private->gix_gc,values->clip_x_origin,values->clip_y_origin);
     }
 
   if (values_mask & GDK_GC_EXPOSURES)
@@ -657,23 +489,11 @@ gdk_gix_gc_set_dashes (GdkGC *gc,
                             gint8  dash_list[],
                             gint   n)
 {
-	gi_set_dashes ( GDK_GC_GET_XGC (gc),
-	      dash_offset, n, dash_list);
+	gi_set_dashes ( GDK_GC_XGC (gc),
+	      dash_offset, n, (const char*)dash_list);
   g_warning ("gdk_gix_gc_set_dashes not implemented");
 }
 
-static void
-gc_unset_clip_mask (GdkGC *gc)
-{
-  GdkGCGix *data = GDK_GC_GIX (gc);
-
-  if (data->values.clip_mask)
-    {
-      g_object_unref (data->values.clip_mask);
-      data->values.clip_mask = NULL;
-      data->values_mask &= ~ GDK_GC_CLIP_MASK;
-    }
-}
 
 void
 _gdk_windowing_gc_copy (GdkGC *dst_gc,
@@ -684,9 +504,15 @@ _gdk_windowing_gc_copy (GdkGC *dst_gc,
   g_return_if_fail (dst_gc != NULL);
   g_return_if_fail (src_gc != NULL);
 
+  g_print("_gdk_windowing_gc_copy fixme\n");
+
+  //gi_dup_gc (GDK_GC_XGC (src_gc), ~((~1) << GCLastBit),  GDK_GC_XGC (dst_gc));
+
   dst_private = GDK_GC_GIX (dst_gc);
 
+#ifdef USE_GC_BODY_REGION
   temp_region_reset(&dst_private->clip_region);
+#endif
 
   if (dst_private->values_mask & GDK_GC_FONT)
     gdk_font_unref (dst_private->values.font);
@@ -756,11 +582,18 @@ _gdk_region_get_xrectangles (const GdkRegion *region,
 }
 
 
-#if 0
+#ifndef USE_GC_BODY_REGION
+
+
+typedef enum {
+  GDK_GC_DIRTY_CLIP = 1 << 0,
+  GDK_GC_DIRTY_TS = 1 << 1
+} GdkGCDirtyValues;
 
 gi_gc_ptr_t
 _gdk_x11_gc_flush (GdkGC *gc)
 {
+  //Display *xdisplay = GDK_GC_XDISPLAY (gc);
   GdkGCGix *private = GDK_GC_GIX (gc);
   gi_gc_ptr_t gix_gc = private->gix_gc;
 
@@ -769,6 +602,11 @@ _gdk_x11_gc_flush (GdkGC *gc)
       GdkRegion *clip_region = _gdk_gc_get_clip_region (gc);
       
       if (!clip_region){
+		  //gi_set_gc_clip_rectangles ( gix_gc, NULL, 0); 
+		  
+		  if(gc->clip_x_origin|| gc->clip_y_origin)g_print("XSetClipOrigin: %d,%d\n",gc->clip_x_origin, gc->clip_y_origin);
+
+		  gi_gc_set_clip_origin(private->gix_gc,gc->clip_x_origin, gc->clip_y_origin);
 	//XSetClipOrigin (xdisplay, gix_gc,gc->clip_x_origin, gc->clip_y_origin);
 	  }
       else
@@ -782,23 +620,38 @@ _gdk_x11_gc_flush (GdkGC *gc)
                                        &rectangles,
                                        &n_rects);
 
-		 // gi_set_gc_clip_rectangles( data->gix_gc,  boxptr, region->numRects);
-	  
+		 //XSetClipRectangles	YXBanded  
 	  gi_set_gc_clip_rectangles ( gix_gc, 
                               rectangles,
-                              n_rects);
-          
+                              n_rects);          
 	  g_free (rectangles);
 	}
     }
 
   if (private->dirty_mask & GDK_GC_DIRTY_TS)
     {
+	  g_print("%s: non XSetTSOrigin (%d,%d)\n",__FUNCTION__, gc->ts_x_origin, gc->ts_y_origin);
       //XSetTSOrigin (xdisplay, gix_gc,  gc->ts_x_origin, gc->ts_y_origin);
     }
 
   private->dirty_mask = 0;
   return gix_gc;
+}
+
+
+gi_gc_ptr_t
+gdk_x11_gc_get_xgc (GdkGC *gc)
+{
+  GdkGCGix *gc_x11;
+  
+  g_return_val_if_fail (GDK_IS_GC_GIX (gc), NULL);
+
+  gc_x11 = GDK_GC_GIX (gc);
+
+  if (gc_x11->dirty_mask)
+    _gdk_x11_gc_flush (gc);
+
+  return gc_x11->gix_gc;
 }
 
 void
@@ -826,6 +679,21 @@ _gdk_windowing_gc_set_clip_region (GdkGC           *gc,
 }
 
 #else
+
+
+static void
+gc_unset_clip_mask (GdkGC *gc)
+{
+  GdkGCGix *data = GDK_GC_GIX (gc);
+
+  if (data->values.clip_mask)
+    {
+      g_object_unref (data->values.clip_mask);
+      data->values.clip_mask = NULL;
+      data->values_mask &= ~ GDK_GC_CLIP_MASK;
+    }
+}
+
 void
 _gdk_windowing_gc_set_clip_region (GdkGC           *gc,
                                    const GdkRegion *region)

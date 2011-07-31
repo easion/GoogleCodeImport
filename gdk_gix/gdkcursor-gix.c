@@ -24,10 +24,9 @@
 
 /*
  * GTK+ Gix backend
- * Copyright (C) 2001-2002  convergence integrated media GmbH
- * Copyright (C) 2002       convergence GmbH
- * Written by Denis Oliver Kropp <dok@convergence.de> and
- *            Sven Neumann <sven@convergence.de>
+ * Copyright (C) 2011 www.hanxuantech.com.
+ * Written by Easion <easion@hanxuantech.com> , it's based
+ * on DirectFB port.
  */
 #include "config.h"
 #include "gdk.h"
@@ -207,7 +206,7 @@ GdkCursor *
 gdk_cursor_new_for_display (GdkDisplay *display,GdkCursorType cursor_type)
 {
   GdkCursor *cursor;
-  GdkDisplayDFB *dfb_display  = GDK_DISPLAY_DFB(display);
+  //GdkDisplayGIX *gix_display  = GDK_DISPLAY_GIX(display);
 
   if (cursor_type >= sizeof(stock_cursors)/sizeof(stock_cursors[0]))
     return NULL;
@@ -216,11 +215,10 @@ gdk_cursor_new_for_display (GdkDisplay *display,GdkCursorType cursor_type)
   cursor = stock_cursors[cursor_type].cursor;
   if (!cursor)
     {
-#if 1
+
       GdkCursorGix     *private;
-      int              ret;
-      gi_image_t      *temp;
-     // gi_image_t      *shape;
+      //int              ret;
+      gi_image_t      *temp=NULL;
 
       int width       = stock_cursors[cursor_type+1].width;
       int height      = stock_cursors[cursor_type+1].height;
@@ -236,96 +234,55 @@ gdk_cursor_new_for_display (GdkDisplay *display,GdkCursorType cursor_type)
           uint32_t  *dst;
           int     pitch;
 
-		  dst  = temp->rgba;
+		  dst  = (uint32_t*)temp->rgba;
 		  pitch  = temp->pitch;
+        
+		  gint x, y;
+		  gint mx, my;
+		  gint  p = ((stock_cursors[cursor_type].width + 7) / 8) * 8;
+		  gint mp = ((stock_cursors[cursor_type+1].width + 7) / 8) * 8;
 
-         // ret = temp->Lock (temp, DSLF_WRITE, (void**)&dst, &pitch);
-         // if (ret)
-            
-            {
-              gint x, y;
-              gint mx, my;
-              gint  p = ((stock_cursors[cursor_type].width + 7) / 8) * 8;
-              gint mp = ((stock_cursors[cursor_type+1].width + 7) / 8) * 8;
+		  const guchar *src;
+		  const guchar *mask;
 
-              const guchar *src;
-              const guchar *mask;
+		  pitch >>= 2;
 
-              pitch >>= 2;
+		  src  = stock_cursors[cursor_type].bits;
+		  mask = stock_cursors[cursor_type+1].bits;
 
-              src  = stock_cursors[cursor_type].bits;
-              mask = stock_cursors[cursor_type+1].bits;
+		  mx = stock_cursors[cursor_type+1].hotx - stock_cursors[cursor_type].hotx;
+		  my = stock_cursors[cursor_type+1].hoty - stock_cursors[cursor_type].hoty;
 
-              mx = stock_cursors[cursor_type+1].hotx - stock_cursors[cursor_type].hotx;
-              my = stock_cursors[cursor_type+1].hoty - stock_cursors[cursor_type].hoty;
+		  for (y = 0; y < height; y++)
+			{
+			  for (x = 0; x < width; x++)
+				{
+				  gint  bit = x-mx + (y-my) * p;
+				  gint mbit =    x +     y  * mp;
 
-              for (y = 0; y < height; y++)
-                {
-                  for (x = 0; x < width; x++)
-                    {
-                      gint  bit = x-mx + (y-my) * p;
-                      gint mbit =    x +     y  * mp;
+				  uint32_t color = (x-mx < 0  ||  y-my < 0  ||
+								 x-mx >= stock_cursors[cursor_type].width  ||
+								 y-my >= stock_cursors[cursor_type].height)
+					? 0x00FFFFFF : (src[bit/8] & (1 << bit%8) ? 0 : 0x00FFFFFF);
 
-                      uint32_t color = (x-mx < 0  ||  y-my < 0  ||
-                                     x-mx >= stock_cursors[cursor_type].width  ||
-                                     y-my >= stock_cursors[cursor_type].height)
-                        ? 0x00FFFFFF : (src[bit/8] & (1 << bit%8) ? 0 : 0x00FFFFFF);
+		  uint8_t  a     = color ? 0xE0 : 0xFF;
+				  uint32_t alpha = mask[mbit/8] & (1 << mbit%8) ? (a << 24) : 0;
 
-		      uint8_t  a     = color ? 0xE0 : 0xFF;
-                      uint32_t alpha = mask[mbit/8] & (1 << mbit%8) ? (a << 24) : 0;
+				  dst[x + y*pitch] = alpha | color;
+				}
+			}
 
-                      dst[x + y*pitch] = alpha | color;
-                    }
-                }
-
-              //temp->Unlock (temp);
-            }
-        }
-
-
+		}
       //width  += 2;
-      //height += 2;
-
-      //shape=gi_create_image_depth(width,height,GI_RENDER_a8r8g8b8);
-
-      //if( !shape ) {
-	//temp->Release(temp);
-	//return NULL;
-     // }
-
-      //shape->Clear (shape, 0x80, 0x80, 0x80, 0);
-
-      //shape->SetBlittingFlags (shape, (DSBLIT_BLEND_COLORALPHA |
-       //                                DSBLIT_BLEND_ALPHACHANNEL));
-
-      //shape->SetColor (shape, 0, 0, 0, 0x30);
-      //shape->Blit (shape, temp, NULL, 0, 0);
-      //shape->Blit (shape, temp, NULL, 0, 2);
-      //shape->Blit (shape, temp, NULL, 2, 0);
-      //shape->Blit (shape, temp, NULL, 2, 2);
-
-      //shape->SetColor (shape, 0, 0, 0, 0xA0);
-      //shape->Blit (shape, temp, NULL, 1, 0);
-      //shape->Blit (shape, temp, NULL, 0, 1);
-      //shape->Blit (shape, temp, NULL, 2, 1);
-     // shape->Blit (shape, temp, NULL, 1, 2);
-
-      //shape->SetColor (shape, 0, 0, 0, 0xE0);
-      //shape->Blit (shape, temp, NULL, 1, 1);
-
-      //temp->Release (temp);
-
+      //height += 2;  
       private = g_new0 (GdkCursorGix, 1);
       cursor = (GdkCursor *) private;
       cursor->type = GDK_CURSOR_IS_PIXMAP;
       cursor->ref_count = 1;
-
       private->shape_img = temp;
       private->hot_x = stock_cursors[cursor_type].hotx;
       private->hot_y = stock_cursors[cursor_type].hoty;
-
       stock_cursors[cursor_type].cursor = cursor;
-#endif
     }
 
   return gdk_cursor_ref (cursor);
@@ -371,20 +328,7 @@ gdk_cursor_new_from_pixmap (GdkPixmap      *source,
    *  that correspond to X11 bitmaps. This is the traditional usage of
    *  gdk_cursor_new_from_pixmap(). For GTK+-Gix it might make
    *  sense to allow arbitrary ARGB cursors.
-   */
-
-  //shape->Clear (shape, bg->red >> 8, bg->green >> 8, bg->blue >> 8, 0xFF);
-
-  //shape->SetColor (shape, fg->red >> 8, fg->green >> 8, fg->blue >> 8, 0xFF);
-  //shape->SetBlittingFlags (shape,
-   //                        DSBLIT_BLEND_ALPHACHANNEL | DSBLIT_COLORIZE);
-  //shape->Blit (shape, impl->surface, NULL, 0, 0);
-
-  //shape->SetPorterDuff (shape, DSPD_DST_IN);
-  //shape->Blit (shape, mask_impl->surface, NULL, 0, 0);
-
-  //shape->SetBlittingFlags (shape, DSBLIT_NOFX);
-  //shape->SetPorterDuff (shape, DSPD_NONE);
+   */  
 
   private = g_new (GdkCursorGix, 1);
   cursor = (GdkCursor *) private;
@@ -486,8 +430,6 @@ _gdk_cursor_destroy (GdkCursor *cursor)
 	  private->shape_img = NULL;
   }
 
-  //private->shape->Release (private->shape);
-
   g_free (private);
 }
 
@@ -500,7 +442,7 @@ gdk_cursor_get_display (GdkCursor *cursor)
 guint
 gdk_display_get_default_cursor_size (GdkDisplay    *display)
 {
-  return 16;
+  return 32;
 }
 
 /**

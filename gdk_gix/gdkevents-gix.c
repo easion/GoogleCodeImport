@@ -22,12 +22,12 @@
  * file for a list of people on the GTK+ Team.
  */
 
+
 /*
  * GTK+ Gix backend
- * Copyright (C) 2001-2002  convergence integrated media GmbH
- * Copyright (C) 2002-2004  convergence GmbH
- * Written by Denis Oliver Kropp <dok@convergence.de> and
- *            Sven Neumann <sven@convergence.de>
+ * Copyright (C) 2011 www.hanxuantech.com.
+ * Written by Easion <easion@hanxuantech.com> , it's based
+ * on DirectFB port.
  */
 
 #include "config.h"
@@ -124,7 +124,7 @@ apply_filters (GdkWindow      *window,
 }
 
 static void
-dfb_events_process_window_event (gi_msg_t *event)
+gix_events_process_window_event (gi_msg_t *event)
 {
   GdkWindow *window;
 
@@ -152,7 +152,7 @@ dfb_events_process_window_event (gi_msg_t *event)
   if (!window)
     return;
 
-  gdk_event_translate (event, window,TRUE);
+  gdk_event_translate (event, window,FALSE);
 }
 
 static gboolean
@@ -163,7 +163,7 @@ gdk_event_send_client_message_by_window (GdkEvent *event,
 
 	D_UNIMPLEMENTED;
 
-  /*DFBUserEvent evt;
+  /*GIXUserEvent evt;
 
   g_return_val_if_fail(event != NULL, FALSE);
   g_return_val_if_fail(GDK_IS_WINDOW(window), FALSE);
@@ -172,14 +172,14 @@ gdk_event_send_client_message_by_window (GdkEvent *event,
   evt.type = GPOINTER_TO_UINT (GDK_ATOM_TO_POINTER (event->client.message_type));
   evt.data = (void *) event->client.data.l[0];
 
-  _gdk_display->buffer->PostEvent(_gdk_display->buffer, DFB_EVENT (&evt));
+  _gdk_display->buffer->PostEvent(_gdk_display->buffer, GIX_EVENT (&evt));
   */
 
   return TRUE;
 }
 
 static void
-dfb_events_dispatch (void)
+gix_events_dispatch (void)
 {
   GdkDisplay *display = gdk_display_get_default ();
   GdkEvent   *event;
@@ -194,7 +194,7 @@ dfb_events_dispatch (void)
 }
 
 static gboolean
-dfb_events_io_func (GIOChannel   *channel,
+gix_events_io_func (GIOChannel   *channel,
                     GIOCondition  condition,
                     gpointer      data)
 {
@@ -217,17 +217,17 @@ dfb_events_io_func (GIOChannel   *channel,
 
   for (i = 0, event = buf; i < read; i++, event++)
     {
-	  dfb_events_process_window_event (event);
+	  gix_events_process_window_event (event);
 
       /*switch (event->clazz)
         {
         case DFEC_WINDOW:
           if (event->window.type == DWET_ENTER ) {
             if ( i>0 && buf[i-1].window.type != DWET_ENTER )
-              dfb_events_process_window_event (&event->window);
+              gix_events_process_window_event (&event->window);
           }
           else
-            dfb_events_process_window_event (&event->window);
+            gix_events_process_window_event (&event->window);
           break;
 
         case DFEC_USER:
@@ -239,7 +239,7 @@ dfb_events_io_func (GIOChannel   *channel,
             for (list = client_filters; list; list = list->next)
               {
                 GdkClientFilter *filter     = list->data;
-                DFBUserEvent    *user_event = (DFBUserEvent *) event;
+                GIXUserEvent    *user_event = (GIXUserEvent *) event;
                 GdkAtom          type;
 
                 type = GDK_POINTER_TO_ATOM (GUINT_TO_POINTER (user_event->type));
@@ -261,7 +261,7 @@ dfb_events_io_func (GIOChannel   *channel,
     }
 
 
-  dfb_events_dispatch ();
+  gix_events_dispatch ();
 
   return TRUE;
 }
@@ -271,7 +271,7 @@ _gdk_events_init (void)
 {
   GIOChannel *channel;
   GSource    *source;
-  int   ret;
+  //int   ret;
   gint        fd;
 
   fd = gi_get_connection_fd();
@@ -285,7 +285,7 @@ _gdk_events_init (void)
 
   g_source_set_priority (source, G_PRIORITY_DEFAULT);
   g_source_set_can_recurse (source, TRUE);
-  g_source_set_callback (source, (GSourceFunc) dfb_events_io_func, NULL, NULL);
+  g_source_set_callback (source, (GSourceFunc) gix_events_io_func, NULL, NULL);
 
   g_source_attach (source, NULL);
   g_source_unref (source);
@@ -418,6 +418,7 @@ gdk_gix_child_at (GdkWindow *window,
   return window;
 }
 
+/*
 static void
 get_real_window (GdkDisplay *display,
 		 gi_msg_t     *event,
@@ -427,6 +428,7 @@ get_real_window (GdkDisplay *display,
 	*event_window = event->ev_window;
 	*filter_window = 0;
 }
+*/
 
 static void
 generate_focus_event (GdkWindow *window,
@@ -442,65 +444,65 @@ generate_focus_event (GdkWindow *window,
   gdk_event_put (&event);
 }
 
+
 static GdkEvent *
 gdk_event_translate (gi_msg_t *g_event,
                      GdkWindow      *window,gboolean    return_exposes)
 {
-  GdkWindowObject *private;
-  GdkDisplay      *display;
-  GdkEvent        *event    = NULL;
+	GdkWindowObject *private;
+	GdkDisplay      *display;
+	GdkEvent        *event    = NULL;
 
-  g_return_val_if_fail (g_event != NULL, NULL);
-  g_return_val_if_fail (GDK_IS_WINDOW (window), NULL);
+	g_return_val_if_fail (g_event != NULL, NULL);
+	g_return_val_if_fail (GDK_IS_WINDOW (window), NULL);
 
-  int root_x = g_event->params[0];
-  int root_y = g_event->params[1];
+	int root_x = g_event->params[0];
+	int root_y = g_event->params[1];
 
+	private = GDK_WINDOW_OBJECT (window);
 
-  private = GDK_WINDOW_OBJECT (window);
+	g_object_ref (G_OBJECT (window));
 
-  g_object_ref (G_OBJECT (window));
-
-  /*
-   * Apply per-window filters
-   *
-   * If result is GDK_FILTER_CONTINUE, we continue as if nothing
-   * happened. If it is GDK_FILTER_REMOVE or GDK_FILTER_TRANSLATE,
-   * we return TRUE and won't dispatch the event.
-   */
+	/*
+	* Apply per-window filters
+	*
+	* If result is GDK_FILTER_CONTINUE, we continue as if nothing
+	* happened. If it is GDK_FILTER_REMOVE or GDK_FILTER_TRANSLATE,
+	* we return TRUE and won't dispatch the event.
+	*/
   if (private->filters)
-    {
-      switch (apply_filters (window, g_event, private->filters))
-        {
-        case GDK_FILTER_REMOVE:
-        case GDK_FILTER_TRANSLATE:
-          g_object_unref (G_OBJECT (window));
-          return NULL;
+  {
+	switch (apply_filters (window, g_event, private->filters))
+	{
+	case GDK_FILTER_REMOVE:
+	case GDK_FILTER_TRANSLATE:
+	g_object_unref (G_OBJECT (window));
+	return NULL;
 
-        default:
-          break;
-        }
-    }
+	default:
+	break;
+	}
+  }
 
   display = gdk_drawable_get_display (GDK_DRAWABLE (window));
 
   switch (g_event->type)
-    {
-		 case GI_MSG_EXPOSURE :
-      GDK_NOTE (EVENTS,
-		g_message ("expose:\t\twindow: %ld  %d	x,y: %d %d  w,h: %d %d%s",
-			   g_event->window, g_event->count,
-			   g_event->body.rect.x, g_event->body.rect.y,
-			   g_event->body.rect.w, g_event->body.rect.h,
-			   event->any.send_event ? " (send)" : ""));
-      
-      if (private == NULL)
-        {
-          return NULL;
-          break;
-        }
-      
-      {
+  {
+	case GI_MSG_EXPOSURE :
+	GDK_NOTE (EVENTS,
+	g_message ("expose:\t\twindow: %ld  %d	x,y: %d %d  w,h: %d %d%s",
+	g_event->window, g_event->count,
+	g_event->body.rect.x, g_event->body.rect.y,
+	g_event->body.rect.w, g_event->body.rect.h,
+	event->any.send_event ? " (send)" : ""));
+
+	if (private == NULL)
+	{
+	return NULL;
+	break;
+	}
+
+	{
 	GdkRectangle expose_rect;
 	int xoffset = 0;
 	int yoffset = 0;
@@ -511,231 +513,224 @@ gdk_event_translate (gi_msg_t *g_event,
 	expose_rect.height = g_event->body.rect.h;
 
 	if (return_exposes) //dpp
-	  {
-		event = gdk_gix_event_make (window, 
-                                       GDK_EXPOSE);
+	{
+	event = gdk_gix_event_make (window,	GDK_EXPOSE);
 
-	    event->expose.type = GDK_EXPOSE;
-	    event->expose.area = expose_rect;
-	    event->expose.region = gdk_region_rectangle (&expose_rect);
-	    event->expose.window = window;
-	    event->expose.count = 1;
-		//_gdk_window_process_expose (window, 0, &expose_rect);
-
-	    //return_val = TRUE;
-	  }
+	event->expose.type = GDK_EXPOSE;
+	event->expose.area = expose_rect;
+	event->expose.region = gdk_region_rectangle (&expose_rect);
+	event->expose.window = window;
+	event->expose.count = 1;
+	//return_val = TRUE;
+	}
 	else
-	  {
-		event =NULL;
-
-	    //_gdk_window_process_expose (window, g_event->serial, &expose_rect);
-	    //_gdk_window_process_expose (window, 0, &expose_rect);
-	    //return_val = FALSE;
-	  }
-	
+	{
+	_gdk_window_process_expose (window, 0, &expose_rect);
+	  //  return_val = FALSE;
+		event = NULL;
+	}
 	//return_val = FALSE;
-      }	
-		 break;
+	}	
+	break;
 
-    
 
-    case GI_MSG_BUTTON_DOWN:
-    case GI_MSG_BUTTON_UP:
-      {
-        static gboolean  click_grab = FALSE;
-        GdkWindow       *child;
-        gint             wx, wy;
-        guint            mask;
-        guint            button;
-		int button2;
 
-        _gdk_gix_mouse_x = wx = root_x;
-        _gdk_gix_mouse_y = wy = root_y;
+	case GI_MSG_BUTTON_DOWN:
+	case GI_MSG_BUTTON_UP:
+	{
+	static gboolean  click_grab = FALSE;
+	GdkWindow       *child;
+	gint             wx, wy;
+	guint            mask;
+	guint            button;
+	int button_gix;
 
-		if (g_event->type == GI_MSG_BUTTON_DOWN){
-		  button2 = g_event->params[2] ;
-		  if (button2 & (GI_BUTTON_WHEEL_UP|GI_BUTTON_WHEEL_DOWN|
-			  GI_BUTTON_WHEEL_LEFT|GI_BUTTON_WHEEL_RIGHT)){
-		 GdkWindow *event_win;		
+	_gdk_gix_mouse_x = wx = root_x;
+	_gdk_gix_mouse_y = wy = root_y;
 
-		  if (_gdk_gix_pointer_grab_window) 
-          {
-            GdkDrawableImplGix *impl;
+	if (g_event->type == GI_MSG_BUTTON_DOWN){
+	button_gix = g_event->params[2] ;
 
-            event_win = _gdk_gix_pointer_grab_window;
-            impl = GDK_DRAWABLE_IMPL_GIX (GDK_WINDOW_OBJECT (event_win)->impl);            
-            g_event->body.rect.x = root_x - impl->abs_x; //FIXME
-            g_event->body.rect.y = root_y - impl->abs_y;
-          }
-        else
-          {
-            event_win = gdk_gix_child_at (window,
-                                               &g_event->body.rect.x, &g_event->body.rect.y);
-          }
+	mask = build_pointer_event_state(button_gix, g_event->body.message[3]);
+	_gdk_gix_modifiers |= mask;
 
-        if (event_win)
-          {
-		  event = gdk_gix_event_make (event_win, GDK_SCROLL);
+	if (button_gix & (GI_BUTTON_WHEEL_UP|GI_BUTTON_WHEEL_DOWN|
+	GI_BUTTON_WHEEL_LEFT|GI_BUTTON_WHEEL_RIGHT)){
+	GdkWindow *event_win;		
 
-		  event->scroll.type = GDK_SCROLL;
-          if (button2 & GI_BUTTON_WHEEL_UP)
-            event->scroll.direction = GDK_SCROLL_UP;
-          else if (button2 & GI_BUTTON_WHEEL_DOWN)
-            event->scroll.direction = GDK_SCROLL_DOWN;
-          else if (button2 & GI_BUTTON_WHEEL_LEFT)
-            event->scroll.direction = GDK_SCROLL_LEFT;
-          else
-            event->scroll.direction = GDK_SCROLL_RIGHT;
-		  event->scroll.x = g_event->body.rect.x ;
-		  event->scroll.y = g_event->body.rect.y ;
-		  event->scroll.x_root = (gfloat)_gdk_gix_mouse_x;
-		  event->scroll.y_root = (gfloat)_gdk_gix_mouse_y;
-		  event->scroll.state = (GdkModifierType) _gdk_gix_modifiers;
-		  event->scroll.device =  display->core_pointer;
-		  }
+	if (_gdk_gix_pointer_grab_window) 
+	{
+	GdkDrawableImplGix *impl;
 
-		  //set_screen_from_root (display, event, xevent->xbutton.root);
-		  goto EVENT_OK;	  
-		  }
-		}
-		else{
-		  button2 = g_event->params[3] ;
-		}	 
+	event_win = _gdk_gix_pointer_grab_window;
+	impl = GDK_DRAWABLE_IMPL_GIX (GDK_WINDOW_OBJECT (event_win)->impl);            
+	g_event->body.rect.x = root_x - impl->abs_x; //FIXME
+	g_event->body.rect.y = root_y - impl->abs_y;
+	}
+	else
+	{
+	event_win = gdk_gix_child_at (window,
+	&g_event->body.rect.x, &g_event->body.rect.y);
+	}
 
-		  if(button2 & GI_BUTTON_L){
-            button = 1;
-            mask   = GDK_BUTTON1_MASK;
-		  }
-          else if(button2 &  GI_BUTTON_M){
-            button = 2;
-            mask   = GDK_BUTTON2_MASK;
-		  }
-          else if(button2 &  GI_BUTTON_R){
-            button = 3;
-            mask   = GDK_BUTTON3_MASK;
-		  }
-		  else{
-			  break;
-		  }
+	if (event_win)
+	{
+	event = gdk_gix_event_make (event_win, GDK_SCROLL);
 
-        child = gdk_gix_child_at (_gdk_parent_root, &wx, &wy);
+	event->scroll.type = GDK_SCROLL;
+	if (button_gix & GI_BUTTON_WHEEL_UP)
+	event->scroll.direction = GDK_SCROLL_UP;
+	else if (button_gix & GI_BUTTON_WHEEL_DOWN)
+	event->scroll.direction = GDK_SCROLL_DOWN;
+	else if (button_gix & GI_BUTTON_WHEEL_LEFT)
+	event->scroll.direction = GDK_SCROLL_LEFT;
+	else
+	event->scroll.direction = GDK_SCROLL_RIGHT;
+	event->scroll.x = g_event->body.rect.x ;
+	event->scroll.y = g_event->body.rect.y ;
+	event->scroll.x_root = (gfloat)_gdk_gix_mouse_x;
+	event->scroll.y_root = (gfloat)_gdk_gix_mouse_y;
+	event->scroll.state = (GdkModifierType) _gdk_gix_modifiers;
+	event->scroll.device =  display->core_pointer;
+	}
 
-        if (_gdk_gix_pointer_grab_window &&
-            (_gdk_gix_pointer_grab_events & (g_event->type == 
-                                                  GI_MSG_BUTTON_DOWN ?
-                                                  GDK_BUTTON_PRESS_MASK : 
-                                                  GDK_BUTTON_RELEASE_MASK)) &&
-            (_gdk_gix_pointer_grab_owner_events == FALSE ||
-             child == _gdk_parent_root) )
-          {
-            GdkDrawableImplGix *impl;
+	//set_screen_from_root (display, event, xevent->xbutton.root);
+	goto EVENT_OK;	  
+	}
+	}
+	else{
+	button_gix = g_event->params[3] ;
+	mask = build_pointer_event_state(button_gix, g_event->body.message[3]);  
+	_gdk_gix_modifiers &= ~mask;
+	}	 
 
-            child = _gdk_gix_pointer_grab_window;
-            impl  = GDK_DRAWABLE_IMPL_GIX (GDK_WINDOW_OBJECT (child)->impl);
-            
-            g_event->body.rect.x = g_event->params[0] - impl->abs_x;
-            g_event->body.rect.y = g_event->params[1] - impl->abs_y;
-          }
-        else if (!_gdk_gix_pointer_grab_window ||
-                 (_gdk_gix_pointer_grab_owner_events == TRUE))
-          {
-            g_event->body.rect.x = wx;
-            g_event->body.rect.y = wy;
-          }
-        else
-          {
-            child = NULL;
-          }
+	if(button_gix & GI_BUTTON_L){
+	button = 1;
+	mask   = GDK_BUTTON1_MASK;
+	}
+	else if(button_gix &  GI_BUTTON_M){
+	button = 2;
+	mask   = GDK_BUTTON2_MASK;
+	}
+	else if(button_gix &  GI_BUTTON_R){
+	button = 3;
+	mask   = GDK_BUTTON3_MASK;
+	}
+	else{
+	break;
+	}
 
-        if (g_event->type == GI_MSG_BUTTON_DOWN)
-          _gdk_gix_modifiers |= mask;
-        else
-          _gdk_gix_modifiers &= ~mask;
-
-        if (child)
-          {
-            event =
-              gdk_gix_event_make (child, 
-                                       g_event->type == GI_MSG_BUTTON_DOWN ?
-                                       GDK_BUTTON_PRESS : GDK_BUTTON_RELEASE);
-
-            event->button.x_root = _gdk_gix_mouse_x;
-            event->button.y_root = _gdk_gix_mouse_y;
-            event->button.x = g_event->body.rect.x;
-            event->button.y = g_event->body.rect.y;
-            event->button.state  = _gdk_gix_modifiers;
-            event->button.button = button;
-            event->button.device = display->core_pointer;
-
-            GDK_NOTE (EVENTS, 
-                      g_message ("button: %d at %d,%d %s with state 0x%08x",
-                                 event->button.button,
-                                 (int)event->button.x, (int)event->button.y,
-                                 g_event->type == GI_MSG_BUTTON_DOWN ?
-                                 "pressed" : "released", 
-                                 _gdk_gix_modifiers));
-
-            if (g_event->type == GI_MSG_BUTTON_DOWN)
-              _gdk_event_button_generate (gdk_display_get_default (),event);
-          }
-
-		  printf("calling grab %x\n", _gdk_gix_modifiers);
-
-        /* Handle implicit button grabs: */
-        if (g_event->type == GI_MSG_BUTTON_DOWN  &&  !click_grab  &&  child)
-          {
-            if (gdk_gix_pointer_grab (child, FALSE,
-                                           gdk_window_get_events (child),
-                                           NULL, NULL,
-                                           GDK_CURRENT_TIME,
-                                           TRUE) == GDK_GRAB_SUCCESS)
-              click_grab = TRUE;
-			printf("calling gdk_gix_pointer_grab\n");
-			 //gi_set_focus_window(GDK_WINDOW_GIX_ID(child));
-          }
-        else if (g_event->type == GI_MSG_BUTTON_UP &&
-                 !(_gdk_gix_modifiers & (GDK_BUTTON1_MASK |
-                                              GDK_BUTTON2_MASK |
-                                              GDK_BUTTON3_MASK)) && click_grab)
-          {
-			printf("calling gdk_gix_pointer_ungrab\n");
-            gdk_gix_pointer_ungrab (GDK_CURRENT_TIME, TRUE);
-            click_grab = FALSE;
-          }
-#if 0
-		  if (event->ev_window != event->effect_window){
-			gdk_gix_pointer_ungrab (GDK_CURRENT_TIME, TRUE);
-            click_grab = FALSE;
-		  }
-#endif
-      }
-      break;
- 
-    case GI_MSG_MOUSE_MOVE:
-      {
-        GdkWindow *event_win;
-        GdkWindow *child;
-
-        _gdk_gix_mouse_x = root_x;
-        _gdk_gix_mouse_y = root_y;
-
-	//child = gdk_gix_child_at (window, &g_event->body.rect.x, &g_event->body.rect.y);
-    /* Go all the way to root to catch popup menus */
-    int wx=_gdk_gix_mouse_x;
-    int wy=_gdk_gix_mouse_y;
 	child = gdk_gix_child_at (_gdk_parent_root, &wx, &wy);
 
-    /* first let's see if any cossing event has to be send */
-    gdk_gix_window_send_crossing_events (NULL, child, GDK_CROSSING_NORMAL);
+	if (_gdk_gix_pointer_grab_window &&
+	(_gdk_gix_pointer_grab_events & (g_event->type == 
+	GI_MSG_BUTTON_DOWN ?
+	GDK_BUTTON_PRESS_MASK : 
+	GDK_BUTTON_RELEASE_MASK)) &&
+	(_gdk_gix_pointer_grab_owner_events == FALSE ||
+	child == _gdk_parent_root) )
+	{
+	GdkDrawableImplGix *impl;
 
-    /* then dispatch the motion event to the window the cursor it's inside */
+	child = _gdk_gix_pointer_grab_window;
+	impl  = GDK_DRAWABLE_IMPL_GIX (GDK_WINDOW_OBJECT (child)->impl);
+
+	g_event->body.rect.x = g_event->params[0] - impl->abs_x;
+	g_event->body.rect.y = g_event->params[1] - impl->abs_y;
+	}
+	else if (!_gdk_gix_pointer_grab_window ||
+	(_gdk_gix_pointer_grab_owner_events == TRUE))
+	{
+	g_event->body.rect.x = wx;
+	g_event->body.rect.y = wy;
+	}
+	else
+	{
+	child = NULL;
+	}
+
+	if (g_event->type == GI_MSG_BUTTON_DOWN)
+	_gdk_gix_modifiers |= mask;
+	else
+	_gdk_gix_modifiers &= ~mask;
+
+	if (child)
+	{
+	event =
+	gdk_gix_event_make (child, 
+	g_event->type == GI_MSG_BUTTON_DOWN ?
+	GDK_BUTTON_PRESS : GDK_BUTTON_RELEASE);
+
+	event->button.x_root = _gdk_gix_mouse_x;
+	event->button.y_root = _gdk_gix_mouse_y;
+	event->button.x = g_event->body.rect.x;
+	event->button.y = g_event->body.rect.y;
+	event->button.state  = _gdk_gix_modifiers;
+	event->button.button = button;
+	event->button.device = display->core_pointer;
+
+	GDK_NOTE (EVENTS, g_message ("button: %d at %d,%d %s with state 0x%08x",
+	event->button.button,(int)event->button.x, (int)event->button.y,
+	g_event->type == GI_MSG_BUTTON_DOWN ?"pressed" : "released", _gdk_gix_modifiers));
+
+	if (g_event->type == GI_MSG_BUTTON_DOWN)
+	_gdk_event_button_generate (gdk_display_get_default (),event);
+	}
+
+	//g_print("calling grab %x\n", _gdk_gix_modifiers);
+
+	/* Handle implicit button grabs: */
+	if (g_event->type == GI_MSG_BUTTON_DOWN  &&  !click_grab  &&  child)
+	{
+	if (gdk_gix_pointer_grab (child, FALSE,	gdk_window_get_events (child),
+		NULL, NULL,	GDK_CURRENT_TIME,TRUE) == GDK_GRAB_SUCCESS)
+		click_grab = TRUE;
+		g_print("calling gdk_gix_pointer_grab\n");
+	//gi_set_focus_window(GDK_WINDOW_GIX_ID(child));
+	}
+	else if (g_event->type == GI_MSG_BUTTON_UP &&
+	!(_gdk_gix_modifiers & (GDK_BUTTON1_MASK |GDK_BUTTON2_MASK |GDK_BUTTON3_MASK)) 
+		&& click_grab)
+	{
+	g_print("calling gdk_gix_pointer_ungrab\n");
+	gdk_gix_pointer_ungrab (GDK_CURRENT_TIME, TRUE);
+	click_grab = FALSE;
+	}
+	#if 0
+	if (event->ev_window != event->effect_window){
+	gdk_gix_pointer_ungrab (GDK_CURRENT_TIME, TRUE);
+	click_grab = FALSE;
+	}
+	#endif
+	}
+	break;
+
+	case GI_MSG_MOUSE_MOVE:
+	{
+	GdkWindow *event_win;
+	GdkWindow *child;
+
+	_gdk_gix_modifiers = build_pointer_event_state(g_event->params[2], g_event->body.message[3]);  
+
+	_gdk_gix_mouse_x = root_x;
+	_gdk_gix_mouse_y = root_y;
+
+	/* Go all the way to root to catch popup menus */
+	int wx=_gdk_gix_mouse_x;
+	int wy=_gdk_gix_mouse_y;
+	child = gdk_gix_child_at (_gdk_parent_root, &wx, &wy);
+
+	/* first let's see if any cossing event has to be send */
+	gdk_gix_window_send_crossing_events (NULL, child, GDK_CROSSING_NORMAL);
+
+	/* then dispatch the motion event to the window the cursor it's inside */
 	event_win = gdk_gix_pointer_event_window (child, GDK_MOTION_NOTIFY);
 
 
 	if (event_win)
-	  {
+	{
 
-	    if (event_win == _gdk_gix_pointer_grab_window) {
+	if (event_win == _gdk_gix_pointer_grab_window) {
 		GdkDrawableImplGix *impl;
 
 		child = _gdk_gix_pointer_grab_window;
@@ -743,266 +738,258 @@ gdk_event_translate (gi_msg_t *g_event,
 
 		g_event->body.rect.x = _gdk_gix_mouse_x - impl->abs_x;
 		g_event->body.rect.y = _gdk_gix_mouse_y - impl->abs_y;
-	      }
+	}
 
-	    event = gdk_gix_event_make (child, GDK_MOTION_NOTIFY);
+	event = gdk_gix_event_make (child, GDK_MOTION_NOTIFY);
 
-	    event->motion.x_root = _gdk_gix_mouse_x;
-	    event->motion.y_root = _gdk_gix_mouse_y;
+	event->motion.x_root = _gdk_gix_mouse_x;
+	event->motion.y_root = _gdk_gix_mouse_y;
+	event->motion.x = wx;
+	event->motion.y = wy;
 
-	    //event->motion.x = g_event->body.rect.x;
-	    //event->motion.y = g_event->body.rect.y;
-	    event->motion.x = wx;
-	    event->motion.y = wy;
+	event->motion.state   = _gdk_gix_modifiers;
+	event->motion.is_hint = FALSE;
+	event->motion.device  = display->core_pointer;
 
-	    event->motion.state   = _gdk_gix_modifiers;
-	    event->motion.is_hint = FALSE;
-	    event->motion.device  = display->core_pointer;
+	if (GDK_WINDOW_OBJECT (event_win)->event_mask &	GDK_POINTER_MOTION_HINT_MASK)
+	{
+	}
+	}
+	/* make sure crossing events go to the event window found */
+	/*        GdkWindow *ev_win = ( event_win == NULL ) ? gdk_window_at_pointer (NULL,NULL) :event_win;
+	gdk_gix_window_send_crossing_events (NULL,ev_win,GDK_CROSSING_NORMAL);
+	*/
+	}
+	break;
 
-	    if (GDK_WINDOW_OBJECT (event_win)->event_mask &
-		GDK_POINTER_MOTION_HINT_MASK)
-	      {
-			#if 0 //dpp
-		while (EventBuffer->PeekEvent (EventBuffer,
-					       DFB_EVENT (g_event)) == 0
-		       && g_event->type == DWET_MOTION)
-		  {
-		    EventBuffer->GetEvent (EventBuffer, DFB_EVENT (g_event));
-		    event->motion.is_hint = TRUE; //鼠标的双击事件
-		  }
-		  #endif
-	      }
-	  }
-          /* make sure crossing events go to the event window found */
-/*        GdkWindow *ev_win = ( event_win == NULL ) ? gdk_window_at_pointer (NULL,NULL) :event_win;
-	     gdk_gix_window_send_crossing_events (NULL,ev_win,GDK_CROSSING_NORMAL);
-*/
-      }
-      break;
-
-    case GI_MSG_FOCUS_IN:
-     // gdk_gix_change_focus (window);
+	case GI_MSG_FOCUS_IN:
 	generate_focus_event (window, TRUE);
-      break;
+	break;
 
-    case GI_MSG_FOCUS_OUT:
-      //gdk_gix_change_focus (_gdk_parent_root);
-		generate_focus_event (window, FALSE);
+	case GI_MSG_FOCUS_OUT:
+	generate_focus_event (window, FALSE);
+	break;
 
-      break;
-#if 0 //dpp
-    case DWET_POSITION:
-      {
-        GdkWindow *event_win;
+	/* fallthru */
 
-        private->x = g_event->body.rect.x;
-        private->y = g_event->body.rect.y;
+	case GI_MSG_CONFIGURENOTIFY:
+	{
+	GdkDrawableImplGix *impl;
+	GdkWindow               *event_win;
+	GList                   *list;
 
-        event_win = gdk_gix_other_event_window (window, GDK_CONFIGURE);
+	if (GDK_WINDOW_TYPE (window) == GDK_WINDOW_CHILD ||
+	GDK_WINDOW_TYPE (window) == GDK_WINDOW_ROOT)
+	{
+	break;
+	}
+	impl = GDK_DRAWABLE_IMPL_GIX (private->impl);
 
-        if (event_win)
-          {
-            event = gdk_gix_event_make (event_win, GDK_CONFIGURE);
-            event->configure.x = g_event->body.rect.x;
-            event->configure.y = g_event->body.rect.y;
-            event->configure.width =
-              GDK_DRAWABLE_IMPL_GIX (private->impl)->width;
-            event->configure.height =
-              GDK_DRAWABLE_IMPL_GIX (private->impl)->height;
-          }
+	event_win = gdk_gix_other_event_window (window, GDK_CONFIGURE);
 
-        _gdk_gix_calc_abs (window);
-      }
-      break;
+	if (g_event->params[0] == GI_STRUCT_CHANGE_RESIZE){ //resize
+	if (event_win)
+	{
+	event = gdk_gix_event_make (event_win, GDK_CONFIGURE);
+	event->configure.x      = private->x;
+	event->configure.y      = private->y;
+	event->configure.width  = g_event->body.rect.w;
+	event->configure.height = g_event->body.rect.h;
+	}
 
-    case DWET_POSITION_SIZE:
-      private->x = g_event->body.rect.x;
-      private->y = g_event->body.rect.y;
-#endif
-      /* fallthru */
+	impl->width  = g_event->body.rect.w;
+	impl->height = g_event->body.rect.h;
 
-    case GI_MSG_CONFIGURENOTIFY:
-      {
-        GdkDrawableImplGix *impl;
-        GdkWindow               *event_win;
-        GList                   *list;
+	for (list = private->children; list; list = list->next)
+	{
+	GdkWindowObject         *win;
+	GdkDrawableImplGix *impl;
 
-		if (GDK_WINDOW_TYPE (window) == GDK_WINDOW_CHILD ||
-          GDK_WINDOW_TYPE (window) == GDK_WINDOW_ROOT)
+	win  = GDK_WINDOW_OBJECT (list->data);
+	impl = GDK_DRAWABLE_IMPL_GIX (win->impl);
+
+	_gdk_gix_move_resize_child (GDK_WINDOW (win),
+		win->x, win->y,	impl->width, impl->height);
+	}
+
+	_gdk_gix_calc_abs (window);
+
+	//gdk_window_clear (window);
+	//gdk_window_invalidate_rect (window, NULL, TRUE);  //FIXME DPP
+	}
+	else if (g_event->params[0] == GI_STRUCT_CHANGE_MOVE){ //move
+	private->x = g_event->body.rect.x;
+	private->y = g_event->body.rect.y;
+
+	event_win = gdk_gix_other_event_window (window, GDK_CONFIGURE);
+
+	if (event_win)
+	{
+	event = gdk_gix_event_make (event_win, GDK_CONFIGURE);
+	event->configure.x = g_event->body.rect.x;
+	event->configure.y = g_event->body.rect.y;
+	event->configure.width =
+	GDK_DRAWABLE_IMPL_GIX (private->impl)->width;
+	event->configure.height =
+	GDK_DRAWABLE_IMPL_GIX (private->impl)->height;
+	}
+
+	_gdk_gix_calc_abs (window);  
+	}
+	else{
+	}
+	}
+	break;
+
+	case GI_MSG_KEY_DOWN:
+	case GI_MSG_KEY_UP:
+	{
+		GdkEventType type = (g_event->type == GI_MSG_KEY_UP ?GDK_KEY_RELEASE : GDK_KEY_PRESS);
+		GdkWindow *event_win = gdk_gix_keyboard_event_window (gdk_gix_window_find_focus (),	type);
+		if (event_win){
+		event = gdk_gix_event_make (event_win, type);
+		gdk_gix_translate_key_event (g_event, &event->key);
+		}
+	}
+	break;
+
+	case GI_MSG_MOUSE_EXIT:
+		_gdk_gix_mouse_x = root_x;
+		_gdk_gix_mouse_y = root_y;
+		gdk_gix_window_send_crossing_events (NULL, _gdk_parent_root,GDK_CROSSING_NORMAL);
+		if (gdk_gix_apply_focus_opacity)
 		{
-			break;
 		}
-        impl = GDK_DRAWABLE_IMPL_GIX (private->impl);
+	break;
 
-        event_win = gdk_gix_other_event_window (window, GDK_CONFIGURE);
+	case GI_MSG_MOUSE_ENTER:
+	{
+		GdkWindow *child;
 
-		if (g_event->params[0] == GI_STRUCT_CHANGE_RESIZE){ //resize
-        if (event_win)
-          {
-            event = gdk_gix_event_make (event_win, GDK_CONFIGURE);
-				event->configure.x      = private->x;
-				event->configure.y      = private->y;
-				event->configure.width  = g_event->body.rect.w;
-				event->configure.height = g_event->body.rect.h;
-          }
+		_gdk_gix_mouse_x = root_x;
+		_gdk_gix_mouse_y = root_y;
 
-			impl->width  = g_event->body.rect.w;
-			impl->height = g_event->body.rect.h;
+		child = gdk_gix_child_at (window, &g_event->body.rect.x, &g_event->body.rect.y);
 
-        for (list = private->children; list; list = list->next)
-          {
-            GdkWindowObject         *win;
-            GdkDrawableImplGix *impl;
+		/* this makes sure pointer is set correctly when it previously left
+		* a window being not standard shaped
+		*/
+		gdk_window_set_cursor (window, NULL);
+		gdk_gix_window_send_crossing_events (NULL, child,
+		GDK_CROSSING_NORMAL);
 
-            win  = GDK_WINDOW_OBJECT (list->data);
-            impl = GDK_DRAWABLE_IMPL_GIX (win->impl);
-
-            _gdk_gix_move_resize_child (GDK_WINDOW (win),
-                                             win->x, win->y,
-                                             impl->width, impl->height);
-          }
-
-        _gdk_gix_calc_abs (window);
-
-        gdk_window_clear (window);
-        gdk_window_invalidate_rect (window, NULL, TRUE);  //FIXME DPP
+		if (gdk_gix_apply_focus_opacity)
+		{
 		}
-		else if (g_event->params[0] == GI_STRUCT_CHANGE_MOVE){ //move
-			private->x = g_event->body.rect.x;
-			private->y = g_event->body.rect.y;
+	}
+	break;
 
-			event_win = gdk_gix_other_event_window (window, GDK_CONFIGURE);
+	case GI_MSG_CLIENT_MSG:
+	{
+		GdkWindow *event_win;   
 
-			if (event_win)
-			  {
-				event = gdk_gix_event_make (event_win, GDK_CONFIGURE);
-				event->configure.x = g_event->body.rect.x;
-				event->configure.y = g_event->body.rect.y;
-				event->configure.width =
-				  GDK_DRAWABLE_IMPL_GIX (private->impl)->width;
-				event->configure.height =
-				  GDK_DRAWABLE_IMPL_GIX (private->impl)->height;
-			  }
-			
-			_gdk_gix_calc_abs (window);  
+		if(g_event->body.client.client_type == GA_WM_PROTOCOLS
+		  &&g_event->params[0]  == GA_WM_DELETE_WINDOW ){
+		event_win = gdk_gix_other_event_window (window, GDK_DELETE);
+
+		if (event_win)
+		event = gdk_gix_event_make (event_win, GDK_DELETE);		
+		break;
 		}
-		else{
+	}
+	break;
+
+	case GI_MSG_WINDOW_DESTROY:
+	{
+		GdkWindow *event_win;
+
+		event_win = gdk_gix_other_event_window (window, GDK_DESTROY);
+		if (event_win)
+		event = gdk_gix_event_make (event_win, GDK_DESTROY);
+		gdk_window_destroy_notify (window);
+	}
+	break;
+
+	case GI_MSG_WINDOW_SHOW:
+	case GI_MSG_WINDOW_HIDE:
+  {
+    if (GDK_WINDOW_DESTROYED (window))
+    break;
+
+    //g_print("%s: %d got hide/show message\n",__FUNCTION__,__LINE__);
+    event = gdk_event_new (g_event->type == GI_MSG_WINDOW_SHOW ? GDK_MAP : GDK_UNMAP);
+    event->any.window = window;
+  }
+	break;
+
+	case GI_MSG_CREATENOTIFY:
+	break;
+
+  case GI_MSG_PROPERTYNOTIFY:
+	  if (private->event_mask & GDK_PROPERTY_CHANGE_MASK)
+	{
+	  event = gdk_event_new(GDK_NOTHING);
+	  event->property.type = GDK_PROPERTY_NOTIFY;
+	  event->property.window = window;
+	  event->property.atom = gdk_x11_xatom_to_atom_for_display (display, g_event->params[1]);
+	  event->property.time = g_event->params[2];
+	  event->property.state = g_event->params[0];
+	}
+	else{
+		event = NULL;
+	}
+  break;
+
+  case GI_MSG_SELECTIONNOTIFY:
+	  event = gdk_event_new(GDK_NOTHING);
+
+	  if (g_event->params[0] == G_SEL_NOTIFY){
+	  event->selection.type = GDK_SELECTION_NOTIFY;
+      event->selection.window = window;
+      event->selection.selection = gdk_x11_xatom_to_atom_for_display (display, g_event->params[3]);
+      event->selection.target = gdk_x11_xatom_to_atom_for_display (display, g_event->body.message[0]);
+      if (g_event->params[3] == 0)
+        event->selection.property = GDK_NONE;
+      else
+        event->selection.property = gdk_x11_xatom_to_atom_for_display (display, g_event->params[3]);
+      event->selection.time = g_event->params[1];
+
 		}
-      }
-      break;
+	  else if (g_event->params[0] ==G_SEL_REQUEST)
+	  {
+	  event->selection.type = GDK_SELECTION_REQUEST;
+      event->selection.window = window;
+      event->selection.selection = gdk_x11_xatom_to_atom_for_display (display, g_event->params[3]);
+      event->selection.target = gdk_x11_xatom_to_atom_for_display (display, g_event->body.message[0]);
+      event->selection.property = gdk_x11_xatom_to_atom_for_display (display, g_event->body.message[1]);
+      if (g_event->params[2] != 0)
+        event->selection.requestor = g_event->params[2];
+      else
+        event->selection.requestor = 0;
+      event->selection.time = g_event->body.message[2];
+	  }
+	  else if (g_event->params[0] ==G_SEL_CLEAR)
+	  {
+	  event->selection.type = GDK_SELECTION_CLEAR;
+	  event->selection.window = window;
+	  event->selection.selection = gdk_x11_xatom_to_atom_for_display (display, g_event->params[3]);
+	  event->selection.time = g_event->params[1];
+	  }
+	 break;
 
-    case GI_MSG_KEY_DOWN:
-    case GI_MSG_KEY_UP:
-      {
-        GdkEventType type = (g_event->type == GI_MSG_KEY_UP ?
-                             GDK_KEY_RELEASE : GDK_KEY_PRESS);
-        GdkWindow *event_win =
-          gdk_gix_keyboard_event_window (gdk_gix_window_find_focus (),
-                                              type);
-        if (event_win)
-          {
-            event = gdk_gix_event_make (event_win, type);
-            gdk_gix_translate_key_event (g_event, &event->key);
-          }
-      }
-      break;
 
-    case GI_MSG_MOUSE_EXIT:
-      _gdk_gix_mouse_x = root_x;
-      _gdk_gix_mouse_y = root_y;
+	
+	case GI_MSG_REPARENT:
+	break;
 
-      gdk_gix_window_send_crossing_events (NULL, _gdk_parent_root,
-                                                GDK_CROSSING_NORMAL);
-
-      if (gdk_gix_apply_focus_opacity)
-        {
-		  #if 0 //dpp
-          if (GDK_WINDOW_IS_MAPPED (window))
-            GDK_WINDOW_IMPL_GIX (private->impl)->window->SetOpacity
-              (GDK_WINDOW_IMPL_GIX (private->impl)->window,
-               (GDK_WINDOW_IMPL_GIX (private->impl)->opacity >> 1) +
-               (GDK_WINDOW_IMPL_GIX (private->impl)->opacity >> 2));
-		  #endif
-        }
-      break;
-
-    case GI_MSG_MOUSE_ENTER:
-      {
-        GdkWindow *child;
-        
-        _gdk_gix_mouse_x = root_x;
-        _gdk_gix_mouse_y = root_y;
-
-        child = gdk_gix_child_at (window, &g_event->body.rect.x, &g_event->body.rect.y);
-
-        /* this makes sure pointer is set correctly when it previously left
-         * a window being not standard shaped
-         */
-        gdk_window_set_cursor (window, NULL);
-        gdk_gix_window_send_crossing_events (NULL, child,
-                                                  GDK_CROSSING_NORMAL);
-
-        if (gdk_gix_apply_focus_opacity)
-          {
-
-			 #if 0 //dpp
-            GDK_WINDOW_IMPL_GIX (private->impl)->window->SetOpacity
-              (GDK_WINDOW_IMPL_GIX (private->impl)->window,
-               GDK_WINDOW_IMPL_GIX (private->impl)->opacity);
-			#endif
-          }
-      }
-      break;
-
-	 case GI_MSG_CLIENT_MSG:
-            {
-		 GdkWindow *event_win;   
-		 printf("xxx GI_MSG_CLIENT_MSG got message\n");
-
-			if(g_event->body.client.client_type == GA_WM_PROTOCOLS
-					&&g_event->params[0]  == GA_WM_DELETE_WINDOW ){
-				event_win = gdk_gix_other_event_window (window, GDK_DELETE);
-
-        if (event_win)
-          event = gdk_gix_event_make (event_win, GDK_DELETE);
-				printf("xxx GI_MSG_CLIENT_MSG got message\n");
-				
-                //running=0;
-				break;
-				}
-			}
-			break;
-
-    case GI_MSG_WINDOW_DESTROY:
-      {
-        GdkWindow *event_win;
-
-        event_win = gdk_gix_other_event_window (window, GDK_DESTROY);
-
-        if (event_win)
-          event = gdk_gix_event_make (event_win, GDK_DESTROY);
-
-	gdk_window_destroy_notify (window);
-      }
-      break;
-
-	  case GI_MSG_WINDOW_SHOW:
-		  break;
-	  case GI_MSG_CREATENOTIFY:
-		  break;
-	  case GI_MSG_PROPERTYNOTIFY:
-		  break;
-	  case GI_MSG_REPARENT:
-		  break;
-
-    default:
-      g_message ("unhandled Gix windowing event 0x%08x", g_event->type);
-    }
+	default:
+	g_message ("unhandled Gix windowing event 0x%08x", g_event->type);
+  }
 
 EVENT_OK:
-  g_object_unref (G_OBJECT (window));
+	g_object_unref (G_OBJECT (window));
 
-  return event;
+	return event;
 }
 
 gboolean

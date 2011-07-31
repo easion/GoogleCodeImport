@@ -22,12 +22,12 @@
  * file for a list of people on the GTK+ Team.
  */
 
+
 /*
  * GTK+ Gix backend
- * Copyright (C) 2001-2002  convergence integrated media GmbH
- * Copyright (C) 2002-2004  convergence GmbH
- * Written by Denis Oliver Kropp <dok@convergence.de> and
- *            Sven Neumann <sven@convergence.de>
+ * Copyright (C) 2011 www.hanxuantech.com.
+ * Written by Easion <easion@hanxuantech.com> , it's based
+ * on DirectFB port.
  */
 
 #include "config.h"
@@ -200,7 +200,7 @@ gdk_property_delete_2 (GdkWindow         *window,
                        GdkAtom            property,
                        GdkWindowProperty *prop)
 {
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
   GdkEvent              *event;
   GdkWindow             *event_window;
 
@@ -223,7 +223,7 @@ void
 gdk_property_delete (GdkWindow *window,
                      GdkAtom    property)
 {
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
   GdkWindowProperty     *prop;
 
   g_return_if_fail (GDK_IS_WINDOW (window));
@@ -252,7 +252,7 @@ gdk_property_get (GdkWindow   *window,
                   gint        *actual_length,
                   guchar     **data)
 {
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
   GdkWindowProperty     *prop;
   gint                   nbytes = 0;
 
@@ -317,7 +317,7 @@ gdk_property_change (GdkWindow    *window,
                      const guchar *data,
                      gint          nelements)
 {
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
   GdkWindowProperty     *prop;
   GdkWindowProperty     *new_prop;
   gint                   new_size = 0;

@@ -168,7 +168,6 @@ _gdk_image_new_for_depth (GdkScreen    *screen,
 {
   GdkImage              *image;
   GdkImageGix      *private;
-  int              ret;
   gint                   pitch;
   unsigned  format;
   gi_image_t      *surface;
@@ -201,16 +200,13 @@ _gdk_image_new_for_depth (GdkScreen    *screen,
       return NULL;
     }
 
- // surface = gdk_display_dfb_create_surface(_gdk_display,format,width,height);
   surface = gi_create_image_depth(width,height,format);
 
- // ret = Gix_CreateSurface( TRUE, &desc, &surface );
   if (!surface)
     {
-      GixError( "gdk_image_new - CreateSurface", ret );
+      GixError( "gdk_image_new: Create image failed" );
       return NULL;
     }
-  //surface_GetPixelFormat( surface, &format );
 
   image = g_object_new (gdk_image_get_type (), NULL);
   private = image->windowing_data;
@@ -249,12 +245,7 @@ _gdk_gix_copy_to_image (GdkDrawable *drawable,
 {
   GdkDrawableImplGix *impl;
   GdkImageGix        *private;
-  int                      pitch;
-  gi_cliprect_t             rect = { src_x, src_y, width, height };
-  gi_image_t *ximage;
-  uint32_t format;  
-  int depth;
-  void *mem;
+  int                      pitch; 
   int err;
   gi_window_info_t info;
   
@@ -265,27 +256,8 @@ _gdk_gix_copy_to_image (GdkDrawable *drawable,
 
   if (impl->wrapper == _gdk_parent_root)
     {
-      int ret;
-	  GixError ("_gdk_gix_copy_to_image - root window"
-                         );
-#if 0 //FIXME DPP
-
-      ret = layer->SetCooperativeLevel (layer, DLSCL_ADMINISTRATIVE);
-      if (ret)
-        {
-          GixError ("_gdk_gix_copy_to_image - SetCooperativeLevel",
-                         ret);
-          return NULL;
-        }
-
-      ret = layer->GetSurface (layer, &impl->surface);
-      if (ret)
-        {
-          layer->SetCooperativeLevel (layer, DLSCL_SHARED);
-          GixError ("_gdk_gix_copy_to_image - GetSurface", ret);
-          return NULL;
-        }
-#endif
+	  GixError ("_gdk_gix_copy_to_image - root window" );
+ //FIXME DPP     
     }
 
   if (! impl->window_id)
@@ -300,11 +272,11 @@ _gdk_gix_copy_to_image (GdkDrawable *drawable,
   err = gi_get_window_info(impl->window_id,&info);
   if (err)
   {
-	  printf("_gdk_gix_copy_to_image: bad window %x\n",impl->window_id);
+	  g_print("_gdk_gix_copy_to_image: bad window %x\n",impl->window_id);
 	  return NULL;
   }
 
-  printf("_gdk_gix_copy_to_image: %d,%d/%d,%d\n", dest_x, dest_y,src_x, src_y);
+  g_print("_gdk_gix_copy_to_image: %d,%d/%d,%d\n", dest_x, dest_y,src_x, src_y);
   pitch = gi_image_get_pitch(info.format, width);
   err = gi_get_window_buffer(impl->window_id, dest_x, dest_y, width, height,
 	  pitch<<16 , info.format, image->mem);
@@ -312,21 +284,7 @@ _gdk_gix_copy_to_image (GdkDrawable *drawable,
   {
   }
 
-  //private->surface->Unlock( private->surface );
-
-  //private->surface->Blit( private->surface,
-  //                        impl->surface, &rect, dest_x, dest_y );
-
-  //private->surface->Lock( private->surface, DSLF_READ | DSLF_WRITE, &image->mem, &pitch );
   image->bpl = pitch;
-
-  //if (impl->wrapper == _gdk_parent_root)
-    {
-   //   impl->surface->Release (impl->surface);
-    //  impl->surface = NULL;
-    //  layer->SetCooperativeLevel (layer, DLSCL_SHARED);
-    }
-
   return image;
 }
 
@@ -420,7 +378,6 @@ gdk_gix_image_destroy (GdkImage *image)
   GDK_NOTE (MISC, g_print ("gdk_gix_image_destroy: %#lx\n",
                            (gulong) private->surface));
 
-  //private->surface->Unlock( private->surface );
   if(private->surface_img)
     gi_destroy_image( private->surface_img );
 

@@ -22,14 +22,13 @@
  * file for a list of people on the GTK+ Team.
  */
 
+
 /*
  * GTK+ Gix backend
- * Copyright (C) 2001-2002  convergence integrated media GmbH
- * Copyright (C) 2002-2004  convergence GmbH
- * Written by Denis Oliver Kropp <dok@convergence.de> and
- *            Sven Neumann <sven@convergence.de>
+ * Copyright (C) 2011 www.hanxuantech.com.
+ * Written by Easion <easion@hanxuantech.com> , it's based
+ * on DirectFB port.
  */
-
 #undef GDK_DISABLE_DEPRECATED
 
 #include "config.h"
@@ -52,7 +51,7 @@ struct _GdkFontGix
 {
   GdkFontPrivate    base;
   gint              size;
-  //IGixFont    *dfbfont;
+  //IGixFont    *gixfont;
 };
 
 

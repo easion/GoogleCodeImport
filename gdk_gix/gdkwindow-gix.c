@@ -34,20 +34,18 @@
 #include "cairo.h"
 #include <assert.h>
 
-#define DFB_RECTANGLE_VALS_FROM_REGION(r)    (r)->x1, (r)->y1, (r)->x2-(r)->x1+1, (r)->y2-(r)->y1+1
+#define GIX_RECTANGLE_VALS_FROM_REGION(r)    (r)->x1, (r)->y1, (r)->x2-(r)->x1+1, (r)->y2-(r)->y1+1
 
-
-#define D_DEBUG_AT //printf
 
 static GdkRegion * gdk_window_impl_gix_get_visible_region (GdkDrawable *drawable);
 static void        gdk_window_impl_gix_set_colormap       (GdkDrawable *drawable,
                                                                 GdkColormap *colormap);
-static void gdk_window_impl_gix_init       (GdkWindowImplGix      *window);
-static void gdk_window_impl_gix_class_init (GdkWindowImplGixClass *klass);
+static void gdk_window_impl_gix_init       (GdkWindowImplGIX      *window);
+static void gdk_window_impl_gix_class_init (GdkWindowImplGIXClass *klass);
 static void gdk_window_impl_gix_finalize   (GObject                    *object);
 
 static void gdk_window_impl_iface_init (GdkWindowImplIface *iface);
-
+static void gdk_gix_window_set_events (GdkWindow    *window, GdkEventMask  event_mask);
 
 typedef struct
 {
@@ -83,13 +81,11 @@ gdk_window_gix_process_all_updates (void)
       GdkWindowObject *private = GDK_WINDOW_OBJECT( tmp_list->data );
 
       if (private->update_freeze_count)
-        {
-          
+        {          
           update_windows = g_slist_prepend (update_windows, private);
         }
       else
-        {
-          
+        {          
           gdk_window_process_updates(tmp_list->data,TRUE);
         }
 
@@ -106,17 +102,17 @@ gdk_window_gix_process_all_updates (void)
 
       if (top)
         {
-          GdkWindowImplGix *wimpl = GDK_WINDOW_IMPL_GIX (top->impl);
+          GdkWindowImplGIX *wimpl = GDK_WINDOW_IMPL_GIX (top->impl);
 
           if (wimpl->flips.num_regions)
             {
               D_DEBUG_AT(  "  -> %p flip   [%4d,%4d-%4dx%4d] (%d boxes)\n",
-                          top, DFB_RECTANGLE_VALS_FROM_REGION( &wimpl->flips.bounding ),
+                          top, GIX_RECTANGLE_VALS_FROM_REGION( &wimpl->flips.bounding ),
                           wimpl->flips.num_regions );
 
               wimpl->drawable.surface->Flip( wimpl->drawable.surface, &wimpl->flips.bounding, DSFLIP_NONE );
 
-              dfb_updates_reset( &wimpl->flips );
+              gix_updates_reset( &wimpl->flips );
             }
           else
             D_DEBUG_AT(  "  -> %p has no flips!\n", top );
@@ -176,13 +172,13 @@ gdk_window_impl_gix_get_type (void)
     {
       static const GTypeInfo object_info =
         {
-          sizeof (GdkWindowImplGixClass),
+          sizeof (GdkWindowImplGIXClass),
           (GBaseInitFunc) NULL,
           (GBaseFinalizeFunc) NULL,
           (GClassInitFunc) gdk_window_impl_gix_class_init,
           NULL,           /* class_finalize */
           NULL,           /* class_data */
-          sizeof (GdkWindowImplGix),
+          sizeof (GdkWindowImplGIX),
           0,              /* n_preallocs */
           (GInstanceInitFunc) gdk_window_impl_gix_init,
         };
@@ -202,7 +198,7 @@ gdk_window_impl_gix_get_type (void)
         };
 
       object_type = g_type_register_static (GDK_TYPE_DRAWABLE_IMPL_GIX,
-                                            "GdkWindowImplGix",
+                                            "GdkWindowImplGIX",
                                             &object_info, 0);
       g_type_add_interface_static (object_type,
                                    GDK_TYPE_PAINTABLE,
@@ -223,7 +219,7 @@ _gdk_window_impl_get_type (void)
 }
 
 static void
-gdk_window_impl_gix_init (GdkWindowImplGix *impl)
+gdk_window_impl_gix_init (GdkWindowImplGIX *impl)
 {
   impl->drawable.width  = 1;
   impl->drawable.height = 1;
@@ -234,7 +230,7 @@ gdk_window_impl_gix_init (GdkWindowImplGix *impl)
 }
 
 static void
-gdk_window_impl_gix_class_init (GdkWindowImplGixClass *klass)
+gdk_window_impl_gix_class_init (GdkWindowImplGIXClass *klass)
 {
   GObjectClass     *object_class   = G_OBJECT_CLASS (klass);
   GdkDrawableClass *drawable_class = GDK_DRAWABLE_CLASS (klass);
@@ -265,7 +261,7 @@ g_free_2nd (gpointer a,
 static void
 gdk_window_impl_gix_finalize (GObject *object)
 {
-  GdkWindowImplGix *impl = GDK_WINDOW_IMPL_GIX (object);
+  GdkWindowImplGIX *impl = GDK_WINDOW_IMPL_GIX (object);
 
   D_DEBUG_AT(  "%s( %p ) <- %dx%d\n", __FUNCTION__, impl, impl->drawable.width, impl->drawable.height );
 
@@ -284,7 +280,7 @@ gdk_window_impl_gix_finalize (GObject *object)
     {
       gdk_gix_window_id_table_remove (impl->drawable.window_id);
 	  /* native window resource must be release before we can finalize !*/
-      impl->drawable.window_id = NULL;
+      impl->drawable.window_id = 0;
     }
 
   if (G_OBJECT_CLASS (parent_class)->finalize)
@@ -324,71 +320,18 @@ gdk_window_impl_gix_set_colormap (GdkDrawable *drawable,
 
   if (colormap)
     {
-       GdkDrawableImplGix *priv = GDK_DRAWABLE_IMPL_GIX (drawable);
+      // GdkDrawableImplGix *priv = GDK_DRAWABLE_IMPL_GIX (drawable);
 	   D_UNIMPLEMENTED;
-
-       if (0) //fimxe
-	 {
-	   //IGixPalette *palette = gdk_gix_colormap_get_palette (colormap);
-
-          // if (palette){
-//             priv->surface->SetPalette (priv->surface, palette);
-         //}
-    }
-}
+	 }
 }
 
-#if 0
-static gboolean
-create_gix_window (GdkWindowImplGix *impl,
-                        DFBWindowDescription  *desc,
-                        DFBWindowOptions       window_options)
-{
-  int        ret;
-  gi_window_id_t window;
-
-  D_DEBUG_AT(  "%s( %4dx%4d, caps 0x%08x )\n", __FUNCTION__, desc->width, desc->height, desc->caps );
-
-  ret = _gdk_display->layer->CreateWindow (_gdk_display->layer, desc, &window);
-
-  if (ret != 0)
-    {
-      GixError ("gdk_window_new: Layer->CreateWindow failed", ret);
-      g_assert (0);
-      return FALSE;
-    }
-
-  if ((desc->flags & DWDESC_CAPS) && (desc->caps & DWCAPS_INPUTONLY))
-  {
-    impl->drawable.surface = NULL;
-  } else 
-    window->GetSurface (window, &impl->drawable.surface);
-
-  if (window_options)
-    {
-      //DFBWindowOptions options;
-      window->GetOptions (window, &options);
-      window->SetOptions (window,  options | window_options);
-    }
-
-  impl->drawable.window_id = window;
-
-#ifndef GDK_GIX_NO_EXPERIMENTS
-  //direct_log_printf( NULL, "Initializing (window %p, wimpl %p)\n", win, impl );
-
-  dfb_updates_init( &impl->flips, impl->flip_regions, G_N_ELEMENTS(impl->flip_regions) );
-#endif
-
-  return TRUE;
-}
-#endif
 
 
 void
 _gdk_windowing_window_init (void)
 {
   GdkWindowObject       *private;
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
   gi_screen_info_t  dlc;
 
   g_assert (_gdk_parent_root == NULL);
@@ -405,7 +348,7 @@ _gdk_windowing_window_init (void)
   private->children    = NULL;
 //  impl->drawable.paint_region   = NULL;
   impl->gdkWindow      = _gdk_parent_root;
-  impl->drawable.window_id           = NULL;
+  impl->drawable.window_id           = 0;
   impl->drawable.window_id           = GI_DESKTOP_WINDOW_ID;
   impl->drawable.abs_x   = 0;
   impl->drawable.abs_y   = 0;
@@ -413,28 +356,6 @@ _gdk_windowing_window_init (void)
   impl->drawable.height  = dlc.scr_height;
   impl->drawable.wrapper = GDK_DRAWABLE (private);
   /* custom root window init */
-#if 0
-  {
-    DFBWindowDescription   desc;
-    desc.flags = 0;
-	/*XXX I must do this now its a bug  ALPHA ROOT*/
-
-    desc.flags = DWDESC_CAPS;
-    desc.caps = 0;
-    desc.caps  |= DWCAPS_NODECORATION;
-    desc.caps  |= DWCAPS_ALPHACHANNEL;
-    desc.flags |= ( DWDESC_WIDTH | DWDESC_HEIGHT |
-                      DWDESC_POSX  | DWDESC_POSY );
-    desc.posx   = 0;
-    desc.posy   = 0;
-    desc.width  = dlc.width;
-    desc.height = dlc.height;
-    create_gix_window (impl,&desc,0);
-	g_assert(impl->window != NULL);
-    g_assert(impl->drawable.surface != NULL );
-  }
-  impl->drawable.surface->GetPixelFormat(impl->drawable.surface,&impl->drawable.format);
-  #endif
 
   impl->drawable.format = gi_screen_format();
 
@@ -458,7 +379,7 @@ static const gchar * get_default_title (void)
 	return title;
 }
 
-#if 1
+
 static
 gint window_type_hint_to_level (GdkWindowTypeHint hint)
 {
@@ -498,7 +419,6 @@ gint window_type_hint_to_level (GdkWindowTypeHint hint)
 
   return 0;
 }
-#endif
 
 GdkWindow *
 gdk_gix_window_new (GdkWindow              *parent,
@@ -508,12 +428,12 @@ gdk_gix_window_new (GdkWindow              *parent,
   GdkWindow             *window;
   GdkWindowObject       *private;
   GdkWindowObject       *parent_private;
-  GdkWindowImplGix *impl;
-  GdkWindowImplGix *parent_impl;
+  GdkWindowImplGIX *impl;
+  GdkWindowImplGIX *parent_impl;
   GdkVisual             *visual;
   gint x, y;
   gi_window_id_t window_tl;
-	char *title;
+  const char *title;
   unsigned long win_flags = 0;
 
   g_return_val_if_fail (attributes != NULL, NULL);
@@ -548,199 +468,165 @@ gdk_gix_window_new (GdkWindow              *parent,
 
   private->window_type = attributes->window_type;
 
-  //desc.flags = 0;
-
   if (attributes_mask & GDK_WA_VISUAL)
     visual = attributes->visual;
   else
     visual = gdk_drawable_get_visual (parent);
 
-  switch (attributes->wclass)
-    {
-    case GDK_INPUT_OUTPUT:
-      private->input_only = FALSE;
+	switch (attributes->wclass)
+	{
+	case GDK_INPUT_OUTPUT:
+	private->input_only = FALSE;
+	break;
 
-/*      desc.flags |= DWDESC_PIXELFORMAT;
-      desc.pixelformat = ((GdkVisualGix *) visual)->format;
+	case GDK_INPUT_ONLY:
+	private->input_only = TRUE;
 
-      if (DFB_PIXELFORMAT_HAS_ALPHA (desc.pixelformat))
-        {
-          desc.flags |= DWDESC_CAPS;
-          desc.caps = DWCAPS_ALPHACHANNEL;
-        }*/
-      break;
-
-    case GDK_INPUT_ONLY:
-      private->input_only = TRUE;
-#if 1
 	if (parent == _gdk_parent_root)
 	private->window_type = GDK_WINDOW_TEMP;
-      else
+	else
 	private->window_type = GDK_WINDOW_CHILD;
 
-	  win_flags |= GI_FLAGS_TRANSPARENT;
-#endif
-	printf("GDK_INPUT_ONLY window\n");
-//      desc.flags |= DWDESC_CAPS;
-//      desc.caps = DWCAPS_INPUTONLY;
-      break;
+	win_flags |= GI_FLAGS_TRANSPARENT;
+	//g_print("GDK_INPUT_ONLY window\n");
+	break;
 
-    default:
-      g_warning ("gdk_window_new: unsupported window class\n");
-      _gdk_window_destroy (window, FALSE);
-      return NULL;
-    }
+	default:
+	g_warning ("gdk_window_new: unsupported window class\n");
+	_gdk_window_destroy (window, FALSE);
+	return NULL;
+	}
 
 
 	if (attributes_mask & GDK_WA_TYPE_HINT)
 	{
 		win_flags |= window_type_hint_to_level(attributes->type_hint);
-		printf("try a menu window %d %x\n", GDK_WINDOW_TYPE_HINT_DROPDOWN_MENU,win_flags);
 	}
 
-  switch (private->window_type)
-    {
-    case GDK_WINDOW_TOPLEVEL:
-    case GDK_WINDOW_DIALOG:
-    case GDK_WINDOW_TEMP:
-	if (GDK_WINDOW_TYPE (parent) == GDK_WINDOW_FOREIGN){
-		win_flags |= GI_FLAGS_NON_FRAME;
-	}
-	else{
-	}
-
-	if (private->window_type == GDK_WINDOW_TEMP)
+	switch (private->window_type)
 	{
-		win_flags |= GI_FLAGS_TEMP_WINDOW | GI_FLAGS_NORESIZE | GI_FLAGS_TOPMOST_WINDOW;
-	}
+	case GDK_WINDOW_TOPLEVEL:
+	case GDK_WINDOW_DIALOG:
+	case GDK_WINDOW_TEMP:
+		if (GDK_WINDOW_TYPE (parent) == GDK_WINDOW_FOREIGN){
+			win_flags |= GI_FLAGS_NON_FRAME;
+		}
+		else{
+		}
 
+		if (private->window_type == GDK_WINDOW_TEMP)
+		{
+			win_flags |= GI_FLAGS_TEMP_WINDOW | GI_FLAGS_NORESIZE | GI_FLAGS_TOPMOST_WINDOW;
+		}
 
-	window_tl = gi_create_window(parent_impl->drawable.window_id, x,y,
+		//win_flags |= GI_FLAGS_DOUBLE_BUFFER;
+
+		window_tl = gi_create_window(parent_impl->drawable.window_id, x,y,
 		impl->drawable.width, impl->drawable.height,GI_RGB( 192, 192, 192 ),win_flags);
 
 
-      if (window_tl <= 0)
-        {
-	printf("gdk_gix_window_new window_tl = %x  parent=%x (%d,%d,%d,%d) win_flags=%x error\n", 
-		window_tl, parent_impl->drawable.window_id,
-		x,y,impl->drawable.width, impl->drawable.height,win_flags);
-		//D_UNIMPLEMENTED;
-          _gdk_window_destroy (window, FALSE);
-          return NULL;
-        }
-	printf("gdk_gix_window_new window_tl = %x %x ### parent=%x succ \n", window_tl,parent_impl, parent_impl->drawable.window_id);
-
-		//gi_set_window_background(window_tl,WINDOW_COLOR,GI_BG_USE_NONE);
-
+		if (window_tl <= 0)
+		{
+		g_print("gdk_gix_window_new window_tl = %x  parent=%x (%d,%d,%d,%d) win_flags=%lx error\n", 
+			window_tl, parent_impl->drawable.window_id,	x,y,impl->drawable.width, impl->drawable.height,win_flags);
+		_gdk_window_destroy (window, FALSE);
+		return NULL;
+		}
+		g_print("gdk_gix_window_new window_tl = %x %p ### parent=%x succ \n", 
+			window_tl,parent_impl, parent_impl->drawable.window_id);
 
 		impl->drawable.window_id = window_tl;
 		if (attributes->title != NULL) {
-			title = attributes->title;
+			title = (const char*)attributes->title;
 		} else {
 			title = get_default_title();
 		}
 
 		gdk_window_set_title (window, title);
 		impl->drawable.format = gi_screen_format();
-	
-//      	if( desc.caps != DWCAPS_INPUTONLY )
-//			impl->window->SetOpacity(impl->window, 0x00 );
-      break;
+	break;
 
-    case GDK_WINDOW_CHILD:
-	   impl->drawable.window_id=NULL;
-      if (!private->input_only && parent_impl->drawable.window_id)
-        {
+	case GDK_WINDOW_CHILD:
+		impl->drawable.window_id = 0;
+		//win_flags |= GI_FLAGS_DOUBLE_BUFFER;
+		if (!private->input_only && parent_impl->drawable.window_id)
+		{
 		window_tl = gi_create_window(parent_impl->drawable.window_id, x,y,
-		impl->drawable.width, impl->drawable.height,GI_RGB( 192, 192, 192 ),win_flags|GI_FLAGS_NON_FRAME);
+			impl->drawable.width, impl->drawable.height,
+			GI_RGB( 192, 192, 192 ),win_flags|GI_FLAGS_NON_FRAME);
 
 		if (window_tl <= 0)
-        {
+		{
 		D_UNIMPLEMENTED;
-          _gdk_window_destroy (window, FALSE);
-          return NULL;
-        }
+		_gdk_window_destroy (window, FALSE);
+		return NULL;
+		}
 
-		printf("gdk_gix_window_new GDK_WINDOW_CHILD window_tl = %x parent=%x (%d,%d,%d,%d)\n",
-			window_tl,parent_impl->drawable.window_id, x,y,impl->drawable.width, impl->drawable.height);
+		g_print("gdk_gix_window_new GDK_WINDOW_CHILD window_tl = %x parent=%x (%d,%d,%d,%d)\n",
+		window_tl,parent_impl->drawable.window_id, x,y,impl->drawable.width, impl->drawable.height);
 
 		impl->drawable.window_id = window_tl;
-
-		//gdk_window_set_events (window, attributes->event_mask | GDK_STRUCTURE_MASK);
-		impl->drawable.format = gi_screen_format();
-
-/*          DFBRectangle rect =
-          { x, y, impl->drawable.width, impl->drawable.height };
-          parent_impl->drawable.surface->GetSubSurface (parent_impl->drawable.surface,
-                                                        &rect,
-                                                        &impl->drawable.surface);
-*/
-        }
-      break;
-
-    default:
-      g_warning ("gdk_window_new: unsupported window type: %d",
-                 private->window_type);
-      _gdk_window_destroy (window, FALSE);
-      return NULL;
-    }
-
-  if (impl->drawable.window_id)
-    {
-      GdkColormap *colormap;
-
-	  impl->drawable.format = gi_screen_format(); //FIXME DPP
-
-      //impl->drawable.surface->GetPixelFormat (impl->drawable.surface,
-		//			      &impl->drawable.format);
-
-  	  private->depth = GI_RENDER_FORMAT_BPP(impl->drawable.format);
-
-      if ((attributes_mask & GDK_WA_COLORMAP) && attributes->colormap)
-	{
-	  colormap = attributes->colormap;
+		impl->drawable.format = gi_screen_format();	
 	}
-      else
-	{
-	  if (gdk_visual_get_system () == visual)
-	    colormap = gdk_colormap_get_system ();
-	  else
-	    colormap =gdk_drawable_get_colormap (parent);
+	break;
+
+	default:
+		g_warning ("gdk_window_new: unsupported window type: %d",
+		private->window_type);
+		_gdk_window_destroy (window, FALSE);
+		return NULL;
 	}
 
-      gdk_drawable_set_colormap (GDK_DRAWABLE (window), colormap);
-    }
-  else
-    {
-      impl->drawable.format = ((GdkVisualGix *)visual)->format;
-  	  private->depth = visual->depth;
-    }
+	if (impl->drawable.window_id)
+	{
+	GdkColormap *colormap;
 
-  gdk_window_set_cursor (window, ((attributes_mask & GDK_WA_CURSOR) ?
-                                  (attributes->cursor) : NULL));
+	impl->drawable.format = gi_screen_format(); //FIXME DPP	
 
-  if (parent_private)
-    parent_private->children = g_list_prepend (parent_private->children,
-                                               window);
+	private->depth = GI_RENDER_FORMAT_BPP(impl->drawable.format);
 
-  /* we hold a reference count on ourselves */
-  g_object_ref (window);
+	if ((attributes_mask & GDK_WA_COLORMAP) && attributes->colormap)
+	{
+		colormap = attributes->colormap;
+	}
+	else
+	{
+		if (gdk_visual_get_system () == visual)
+			colormap = gdk_colormap_get_system ();
+		else
+			colormap =gdk_drawable_get_colormap (parent);
+	}
+
+	gdk_drawable_set_colormap (GDK_DRAWABLE (window), colormap);
+	}
+	else
+	{
+		impl->drawable.format = ((GdkVisualGix *)visual)->format;
+		private->depth = visual->depth;
+	}
+
+	gdk_window_set_cursor (window, ((attributes_mask & GDK_WA_CURSOR) ?
+			  (attributes->cursor) : NULL));
+
+	if (parent_private)
+		parent_private->children = g_list_prepend (
+			parent_private->children, window);
+
+	/* we hold a reference count on ourselves */
+	g_object_ref (window);
 
 
-  if (impl->drawable.window_id)
-    {
-      //impl->window->GetID (impl->window, &impl->dfb_id);
-      gdk_gix_window_id_table_insert (impl->drawable.window_id, window);
-      //gdk_gix_event_windows_add (window);
-    }
+	if (impl->drawable.window_id)
+	{
+		gdk_gix_window_id_table_insert (impl->drawable.window_id, window);
+	}
 
-  gdk_window_set_events (window, attributes->event_mask | GDK_STRUCTURE_MASK);
-  if (attributes_mask & GDK_WA_TYPE_HINT){
-	  printf("calling gdk_window_set_type_hint xxx %x\n",attributes->type_hint);
-    gdk_window_set_type_hint (window, attributes->type_hint);
-  }
+	gdk_gix_window_set_events (window, attributes->event_mask | GDK_STRUCTURE_MASK);
+	if (attributes_mask & GDK_WA_TYPE_HINT){
+		gdk_window_set_type_hint (window, attributes->type_hint);
+	}
 
-  return window;
+	return window;
 }
 
 GdkWindow *
@@ -761,7 +647,11 @@ _gdk_windowing_window_destroy_foreign (GdkWindow *window)
    * so reparent it to the root window, and then send
    * it a delete event, as if we were a WM
    */
-	_gdk_windowing_window_destroy (window,TRUE,TRUE);
+
+	gdk_window_hide (window);
+	gdk_window_reparent (window, NULL, 0, 0);
+
+	gi_post_quit_message(GDK_WINDOW_GIX_ID(window));
 }
 
 
@@ -771,7 +661,7 @@ _gdk_windowing_window_destroy (GdkWindow *window,
                                gboolean   foreign_destroy)
 {
   GdkWindowObject       *private;
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
 
   g_return_if_fail (GDK_IS_WINDOW (window));
 
@@ -792,23 +682,20 @@ _gdk_windowing_window_destroy (GdkWindow *window,
   if (window == gdk_gix_focused_window)
     gdk_gix_change_focus (NULL);
 
-
   if (impl->drawable.window_id){
     GdkDrawableImplGix *dimpl = GDK_DRAWABLE_IMPL_GIX (private->impl);
     if(dimpl->cairo_surface) {
+	  //cairo_surface_finish (impl->cairo_surface);
+      //cairo_surface_set_user_data (impl->cairo_surface, &gdk_x11_cairo_key,
+		//		   NULL, NULL);
       cairo_surface_destroy(dimpl->cairo_surface);
       dimpl->cairo_surface= NULL;
     }
-
-	//FIXME DPP
-	//gi_destroy_window(impl->drawable.window_id);
-    //impl->drawable.surface->Release (impl->drawable.surface);
-    //impl->drawable.surface = NULL;
   }
 
   if (!recursing && !foreign_destroy && impl->drawable.window_id ) {
     gi_destroy_window (impl->drawable.window_id);
-    impl->drawable.window_id = NULL;
+    impl->drawable.window_id = 0;
   }
 }
 
@@ -939,40 +826,6 @@ gdk_window_set_focus_on_map (GdkWindow *window,
     private->focus_on_map = focus_on_map;
 }
 
-/*
-
-//FIXME DPP ·Ï³ý´ËÁ´±í
-static gboolean
-gdk_gix_window_raise (GdkWindow *window)
-{
-  GdkWindowObject *parent;
-
-  D_DEBUG_AT(  "%s( %p )\n", __FUNCTION__, window );
-
-  parent = GDK_WINDOW_OBJECT (window)->parent;
-
-  if (parent->children->data == window)
-    return FALSE;
-
-  parent->children = g_list_remove (parent->children, window);
-  parent->children = g_list_prepend (parent->children, window);
-
-  return TRUE;
-}
-
-static void
-gdk_gix_window_lower (GdkWindow *window)
-{
-  GdkWindowObject *parent;
-
-  D_DEBUG_AT(  "%s( %p )\n", __FUNCTION__, window );
-
-  parent = GDK_WINDOW_OBJECT (window)->parent;
-
-  parent->children = g_list_remove (parent->children, window);
-  parent->children = g_list_append (parent->children, window);
-}
-*/
 static gboolean
 all_parents_shown (GdkWindowObject *private)
 {
@@ -1047,7 +900,7 @@ gdk_gix_window_send_crossing_events (GdkWindow       *src,
 
   if (!dest)
   {
-  printf(  "%s( %p -> %p, %d )\n", __FUNCTION__, src, dest, mode );
+  g_print(  "%s( %p -> %p, %d )\n", __FUNCTION__, src, dest, mode );
   return;
   }
 
@@ -1059,7 +912,7 @@ gdk_gix_window_send_crossing_events (GdkWindow       *src,
     static GdkCursorGix *last_cursor = NULL;
 
     GdkWindowObject       *private = GDK_WINDOW_OBJECT (dest);
-    GdkWindowImplGix *impl    = GDK_WINDOW_IMPL_GIX (private->impl);
+    GdkWindowImplGIX *impl    = GDK_WINDOW_IMPL_GIX (private->impl);
     GdkCursorGix     *cursor;
 
     if (_gdk_gix_pointer_grab_cursor)
@@ -1302,7 +1155,7 @@ show_window_internal (GdkWindow *window,
                       gboolean   raise)
 {
   GdkWindowObject       *private;
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
   GdkWindow             *mousewin;
   int err;
 
@@ -1313,10 +1166,7 @@ show_window_internal (GdkWindow *window,
 
   if (!private->destroyed && !GDK_WINDOW_IS_MAPPED (private))
     {
-      private->state &= ~GDK_WINDOW_STATE_WITHDRAWN;
-
-      if (raise)
-        gdk_window_raise (window);
+      private->state &= ~GDK_WINDOW_STATE_WITHDRAWN;      
 
       if (all_parents_shown (GDK_WINDOW_OBJECT (private)->parent))
         {
@@ -1334,11 +1184,14 @@ show_window_internal (GdkWindow *window,
 
   if (impl->drawable.window_id)
     {
-	  printf("show_window_internal: window id %x\n",impl->drawable.window_id);
+	  if (raise)
+        gi_raise_window (impl->drawable.window_id);
+
 	  err = gi_show_window_all(impl->drawable.window_id);
 	  if (err)
 	  {
-		  perror("show_window_internal");
+	  g_print("show_window_internal: window id %x failed\n",impl->drawable.window_id);
+		//  perror("show_window_internal");
 	  }
 
     }
@@ -1359,7 +1212,7 @@ static void
 gdk_gix_window_hide (GdkWindow *window)
 {
   GdkWindowObject       *private;
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
   GdkWindow             *mousewin;
   GdkWindow             *event_win;
 
@@ -1381,11 +1234,12 @@ gdk_gix_window_hide (GdkWindow *window)
 
       if (!private->input_only && private->parent)
         {
-          gdk_window_clear_area (GDK_WINDOW (private->parent),
+          /*gdk_window_clear_area (GDK_WINDOW (private->parent),
                                  private->x,
                                  private->y,
                                  impl->drawable.width,
                                  impl->drawable.height);
+								 */
         }
 
       event_win = gdk_gix_other_event_window (window, GDK_UNMAP);
@@ -1421,8 +1275,8 @@ _gdk_gix_move_resize_child (GdkWindow *window,
                                  gint       height)
 {
   GdkWindowObject       *private;
-  GdkWindowImplGix *impl;
-  GdkWindowImplGix *parent_impl;
+  GdkWindowImplGIX *impl;
+  GdkWindowImplGIX *parent_impl;
   GList                 *list;
 
   g_return_if_fail (GDK_IS_WINDOW (window));
@@ -1447,21 +1301,11 @@ _gdk_gix_move_resize_child (GdkWindow *window,
               cairo_surface_destroy (impl->drawable.cairo_surface);
               impl->drawable.cairo_surface = NULL;
             }
-
-          //impl->drawable.surface->Release (impl->drawable.surface);
-          //impl->drawable.surface = NULL;
         }
 
       parent_impl = GDK_WINDOW_IMPL_GIX (GDK_WINDOW_OBJECT (private->parent)->impl);
 
-      //if (parent_impl->drawable.surface)
-        {
-          //DFBRectangle rect = { x, y, width, height };
-
-          //parent_impl->drawable.surface->GetSubSurface (parent_impl->drawable.surface,
-           //                                             &rect,
-           //                                             &impl->drawable.surface);
-        }
+     
     }
 
   for (list = private->children; list; list = list->next)
@@ -1481,7 +1325,7 @@ gdk_gix_window_move (GdkWindow *window,
                           gint       y)
 {
   GdkWindowObject       *private;
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
 
   g_return_if_fail (GDK_IS_WINDOW (window));
 
@@ -1492,7 +1336,6 @@ gdk_gix_window_move (GdkWindow *window,
     {
       private->x = x;
       private->y = y;
-     // impl->window->MoveTo (impl->drawable.window_id, x, y);
       gi_move_window (impl->drawable.window_id, x, y);
     }
   else
@@ -1530,7 +1373,7 @@ gdk_gix_window_move_resize (GdkWindow *window,
                                  gint       height)
 {
   GdkWindowObject       *private;
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
 
   g_return_if_fail (GDK_IS_WINDOW (window));
 
@@ -1638,8 +1481,8 @@ gdk_gix_window_reparent (GdkWindow *window,
   GdkWindowObject *window_private;
   GdkWindowObject *parent_private;
   GdkWindowObject *old_parent_private;
-  GdkWindowImplGix *impl;
-  GdkWindowImplGix *parent_impl;
+  GdkWindowImplGIX *impl;
+  GdkWindowImplGIX *parent_impl;
   GdkVisual             *visual;
 
   g_return_val_if_fail (GDK_IS_WINDOW (window), FALSE);
@@ -1736,10 +1579,7 @@ gdk_gix_window_reparent (GdkWindow *window,
   parent_private->children = g_list_prepend (parent_private->children, window);
   _gdk_window_init_position (GDK_WINDOW (window_private));
 
-  return FALSE;
-
-
-
+  //return FALSE;
    return TRUE;
 }
 
@@ -1762,7 +1602,7 @@ gdk_gix_window_clear_area (GdkWindow *window,
    if (err)
    {
 	   perror("gdk_gix_window_clear_area");
-	   printf("gdk_gix_window_clear_area: error (%d,%d,%d,%d) %d %x ###\n",
+	   g_print("gdk_gix_window_clear_area: error (%d,%d,%d,%d) %d %x ###\n",
 		   x, y, width, height, send_expose,GDK_WINDOW_GIX_ID (window));
    }
 }
@@ -1770,7 +1610,7 @@ gdk_gix_window_clear_area (GdkWindow *window,
 static void
 gdk_window_gix_raise (GdkWindow *window)
 {
-  GdkWindowImplGix *impl;
+  //GdkWindowImplGIX *impl;
   int err;
 
   g_return_if_fail (GDK_IS_WINDOW (window));
@@ -1780,21 +1620,22 @@ gdk_window_gix_raise (GdkWindow *window)
 
   if (!GDK_WINDOW_GIX_ID (window))
   {
-  printf(  "%s( %x ) zero!!!\n", __FUNCTION__, GDK_WINDOW_GIX_ID (window) );
+  g_print(  "%s( %x ) zero!!!\n", __FUNCTION__, GDK_WINDOW_GIX_ID (window) );
   return;
   }
 
   err = gi_raise_window (GDK_WINDOW_GIX_ID (window));  
   if (err)
   {
-  printf(  "%s( %x ) failed\n", __FUNCTION__, GDK_WINDOW_GIX_ID (window) );
+  g_print(  "%s( %x ) failed : %s\n", __FUNCTION__,
+	  GDK_WINDOW_GIX_ID (window), strerror(errno) );
   }
 }
 
 static void
 gdk_window_gix_lower (GdkWindow *window)
 {
-  GdkWindowImplGix *impl;
+  //GdkWindowImplGIX *impl;
   int err;
 
   D_DEBUG_AT(  "%s( %p )\n", __FUNCTION__, window );
@@ -1807,7 +1648,7 @@ gdk_window_gix_lower (GdkWindow *window)
   err = gi_lower_window ( GDK_WINDOW_GIX_ID (window));  
   if (err)
   {
-  printf(  "%s( %x ) failed\n", __FUNCTION__, GDK_WINDOW_GIX_ID (window) );
+  g_print(  "%s( %x ) failed\n", __FUNCTION__, GDK_WINDOW_GIX_ID (window) );
   }
 }
 
@@ -2017,15 +1858,15 @@ gdk_gix_window_set_back_pixmap (GdkWindow *window,
 
 	if (GDK_WINDOW_DESTROYED (window))
 		return;
-    gi_set_window_background(GDK_WINDOW_GIX_ID (window),
-	  xpixmap, GI_BG_USE_PIXMAP);
+    gi_set_window_background(GDK_WINDOW_GIX_ID (window), xpixmap, GI_BG_USE_PIXMAP);
 }
 
+//FIXME
 static void
 gdk_gix_window_set_cursor (GdkWindow *window,
                                 GdkCursor *cursor)
 {
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
   GdkCursor             *old_cursor;
 
   g_return_if_fail (GDK_IS_WINDOW (window));
@@ -2038,27 +1879,25 @@ gdk_gix_window_set_cursor (GdkWindow *window,
 
  
     {
-      GdkCursorGix *dfb_cursor = (GdkCursorGix *) impl->cursor;
+      GdkCursorGix *gix_cursor = (GdkCursorGix *) impl->cursor;
 
-	  if (dfb_cursor->shape_img && GDK_WINDOW_GIX_ID(window))
+	  if (gix_cursor->shape_img && GDK_WINDOW_GIX_ID(window))
 	  {
 
-	  /*printf("gdk_gix_window_set_cursor: window %x, MOUSE%d,%d ON %d,%d\n", 
+	  /*g_print("gdk_gix_window_set_cursor: window %x, MOUSE%d,%d ON %d,%d\n", 
 		  GDK_WINDOW_GIX_ID(window),
-		  dfb_cursor->shape_img->w,dfb_cursor->shape_img->h,
-		  dfb_cursor->hot_x, dfb_cursor->hot_y);
+		  gix_cursor->shape_img->w,gix_cursor->shape_img->h,
+		  gix_cursor->hot_x, gix_cursor->hot_y);
 		  */
 
       /* this branch takes care of setting the cursor for unmapped windows */
       gi_setup_cursor (GI_CURSOR_USER0 , 
-		  dfb_cursor->hot_x, dfb_cursor->hot_y,dfb_cursor->shape_img);
+		  gix_cursor->hot_x, gix_cursor->hot_y,gix_cursor->shape_img);
 	  gi_load_cursor(GDK_WINDOW_GIX_ID(window),GI_CURSOR_USER0);
 
 	  }
 
-      //impl->window->SetCursorShape (impl->window,
-        //                            dfb_cursor->shape,
-         //                           dfb_cursor->hot_x, dfb_cursor->hot_y);
+     
     }
 
   if (old_cursor)
@@ -2132,33 +1971,34 @@ _gdk_gix_calc_abs (GdkWindow *window)
     }
 }
 
-//FIXME DPP
+
 static gboolean
 gdk_gix_window_get_origin (GdkWindow *window,
                                 gint      *x,
                                 gint      *y)
 {
-  g_return_val_if_fail (GDK_IS_WINDOW (window), FALSE);
-
+  gint return_val;
+  gi_window_id_t child;
+  gint tx = 0;
+  gint ty = 0;
+  
   if (!GDK_WINDOW_DESTROYED (window))
     {
-      GdkDrawableImplGix *impl;
-	  gi_window_info_t info;
-	  //int err;
-
-      impl = GDK_DRAWABLE_IMPL_GIX (GDK_WINDOW_OBJECT (window)->impl);
-	  //gi_get_window_info (
-		//			  GDK_WINDOW_GIX_ID (window),					  
-		//			   &info);
-
-      if (x)
-	*x = impl->abs_x;
-      if (y)
-	*y = impl->abs_y;
-      return TRUE;
+      return_val = gi_translate_coordinates (
+					  GDK_WINDOW_GIX_ID (window),
+					  GI_DESKTOP_WINDOW_ID,
+					  0, 0, &tx, &ty,
+					  &child);
     }
-
-  return FALSE;
+  else
+    return_val = 0;
+  
+  if (x)
+    *x = tx;
+  if (y)
+    *y = ty;
+  
+  return return_val;
 }
 
 gboolean
@@ -2240,7 +2080,7 @@ _gdk_windowing_window_at_pointer (GdkDisplay *display,
   gint       wx, wy;
 
   if (!win_x || !win_y)
-  gdk_gix_mouse_get_info (&wx, &wy, NULL);
+    gdk_gix_mouse_get_info (&wx, &wy, NULL);
 
   if (win_x)
     wx = *win_x;
@@ -2266,12 +2106,12 @@ _gdk_windowing_get_pointer (GdkDisplay       *display,
                             gint             *y,
                             GdkModifierType  *mask)
 {
-(void)screen;
-if(screen) {
-	*screen = gdk_display_get_default_screen  (display);
-}
-_gdk_windowing_window_get_pointer (display,
-				   _gdk_windowing_window_at_pointer(display,NULL,NULL),x,y,mask);
+	(void)screen;
+	if(screen) {
+		*screen = gdk_display_get_default_screen  (display);
+	}
+	_gdk_windowing_window_get_pointer (display,
+		_gdk_windowing_window_at_pointer(display,NULL,NULL),x,y,mask);
 
 }
 
@@ -2349,7 +2189,7 @@ gdk_gix_window_set_events (GdkWindow    *window,
 	if(window_id)
       err = gi_set_events_mask (GDK_WINDOW_GIX_ID(window) , xevent_mask);
 	else
-	  printf("GDK_WINDOW_GIX_ID(window) = %p empty\n", (window));
+	  g_print("gdk_gix_window_set_events(window) = %p empty\n", (window));
   }
 }
 
@@ -2457,7 +2297,7 @@ gdk_window_set_icon_list (GdkWindow *window,
       n++;
       size += 2 + width * height;
 
-	  if (width<=22 && height<=22) //just small icon
+	  if (width<=32 && height<=32) //just small icon
 	{
 		pixbuf_small = pixbuf;
 		break;
@@ -2484,7 +2324,7 @@ gdk_window_set_icon_list (GdkWindow *window,
       stride = gdk_pixbuf_get_rowstride (pixbuf);
       n_channels = gdk_pixbuf_get_n_channels (pixbuf);
 
-	  printf("gdk_window_set_icon_list: %d,%d\n", width, height);
+	  g_print("gdk_window_set_icon_list: %d,%d\n", width, height);
 #if 0     
       *p++ = width;
       *p++ = height;
@@ -2517,27 +2357,18 @@ NEXT:
 
   if (size > 0)
     {
-	  gi_set_window_icon(GDK_WINDOW_GIX_ID (window),(guchar*) data,
-		  gdk_pixbuf_get_width(pixbuf_small),gdk_pixbuf_get_height(pixbuf_small));
-
-      /*XChangeProperty (GDK_DISPLAY_XDISPLAY (display),
-                       GDK_WINDOW_GIX_ID (window),
-		       gi_intern_atom (display, "_NET_WM_ICON"),
-                       GA_CARDINAL, 32,
-                       G_PROP_MODE_Replace,
-                       (guchar*) data, size);
-					   */
+	  gi_set_window_icon(GDK_WINDOW_GIX_ID (window),(uint32_t*) data,
+		  gdk_pixbuf_get_width(pixbuf_small),gdk_pixbuf_get_height(pixbuf_small));    
     }
   else
     {
       gi_delete_property (
-                       GDK_WINDOW_GIX_ID (window),
-		       gi_intern_atom ( "_NET_WM_ICON",FALSE));
+		  GDK_WINDOW_GIX_ID (window), gi_intern_atom ( "_NET_WM_ICON",FALSE));
     }
   
   g_free (data);
 }
-//FIXME DPP
+
 
 void
 gdk_window_set_icon (GdkWindow *window,
@@ -2625,7 +2456,7 @@ void
 gdk_gix_window_set_opacity (GdkWindow *window,
                                  guchar     opacity)
 {
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
 
   g_return_if_fail (GDK_IS_WINDOW (window));
 
@@ -2673,7 +2504,7 @@ gdk_window_focus (GdkWindow *window,
   toplevel = gdk_gix_window_find_toplevel (window);
   if (toplevel != _gdk_parent_root)
     {
-      GdkWindowImplGix *impl;
+      GdkWindowImplGIX *impl;
 
       impl = GDK_WINDOW_IMPL_GIX (GDK_WINDOW_OBJECT (toplevel)->impl);
 
@@ -2714,7 +2545,7 @@ gdk_window_set_type_hint (GdkWindow        *window,
   GDK_NOTE (MISC, g_print ("gdk_window_set_type_hint: 0x%x: %d\n",
                GDK_WINDOW_GIX_ID (window), hint));
 
-  ((GdkWindowImplGix *)((GdkWindowObject *)window)->impl)->type_hint = hint;
+  ((GdkWindowImplGIX *)((GdkWindowObject *)window)->impl)->type_hint = hint;
 
 #if 0
 switch (hint)
@@ -2789,7 +2620,7 @@ void
 gdk_window_set_modal_hint (GdkWindow *window,
                            gboolean   modal)
 {
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
 
   g_return_if_fail (GDK_IS_WINDOW (window));
 
@@ -2797,22 +2628,16 @@ gdk_window_set_modal_hint (GdkWindow *window,
     return;
 
   impl = GDK_WINDOW_IMPL_GIX (GDK_WINDOW_OBJECT (window)->impl);
-
-  if (modal)
-    {
-	  //FIXME DPP
-      //gdk_window_raise (window);
-    }
-  else
-    {
-    }
-
+  
   if (GDK_WINDOW_GIX_ID(window))
     {
-	  //FIXME DPP
-      //impl->window->SetStackingClass (impl->window,
-      //                                modal ? DWSC_UPPER : DWSC_MIDDLE);
     }
+
+ /*if (GDK_WINDOW_IS_MAPPED (window))
+    gdk_wmspec_change_state (modal, window,
+			     gdk_atom_intern_static_string ("_NET_WM_STATE_MODAL"), 
+			     NULL);
+ */
 }
 
 void
@@ -2832,7 +2657,8 @@ gdk_window_set_skip_pager_hint (GdkWindow *window,
   g_return_if_fail (GDK_IS_WINDOW (window));
   if (GDK_WINDOW_DESTROYED (window))
     return;
-  /* N/A */
+
+  /* FIXME: Implement */
 }
 
 
@@ -2841,19 +2667,27 @@ gdk_window_set_group (GdkWindow *window,
                       GdkWindow *leader)
 {
   g_return_if_fail (GDK_IS_WINDOW (window));
-  g_return_if_fail (GDK_IS_WINDOW (leader));
- g_warning(" Gix set_group groups not supported \n");
+  g_return_if_fail (GDK_WINDOW_TYPE (window) != GDK_WINDOW_CHILD);
 
   if (GDK_WINDOW_DESTROYED (window))
-    return;
+    return ;
+  
+  g_warning ("gdk_window_set_group not yet implemented");
 
-  /* N/A */
+  return ;
 }
 
 GdkWindow * gdk_window_get_group (GdkWindow *window)
 {
- g_warning(" Gix get_group groups not supported \n");
- return window;	
+  g_return_val_if_fail (GDK_IS_WINDOW (window), NULL);
+  g_return_val_if_fail (GDK_WINDOW_TYPE (window) != GDK_WINDOW_CHILD, NULL);
+
+  if (GDK_WINDOW_DESTROYED (window))
+    return NULL;
+  
+  g_warning ("gdk_window_get_group not yet implemented");
+
+  return NULL;
 }
 
 void
@@ -2920,14 +2754,29 @@ gdk_window_set_functions (GdkWindow     *window,
   g_message("unimplemented %s", __FUNCTION__);
 }
 
+
+static void
+gdk_propagate_shapes (gi_window_id_t   win,
+		      gboolean merge)
+{
+}
+
 static void
 gdk_gix_window_set_child_shapes (GdkWindow *window)
 {
+  if (GDK_WINDOW_DESTROYED (window))
+    return;
+
+  gdk_propagate_shapes (GDK_WINDOW_GIX_ID (window), FALSE);
 }
 
 static void
 gdk_gix_window_merge_child_shapes (GdkWindow *window)
 {
+  if (GDK_WINDOW_DESTROYED (window))
+    return;
+
+  gdk_propagate_shapes (GDK_WINDOW_GIX_ID(window), TRUE);
 }
 
 void
@@ -2967,7 +2816,8 @@ gdk_window_begin_resize_drag (GdkWindow     *window,
 
   if (GDK_WINDOW_DESTROYED (window))
     return;
-
+  if (button != 1)
+    return;
   g_message("unimplemented %s", __FUNCTION__);
 }
 
@@ -2982,6 +2832,10 @@ gdk_window_begin_move_drag (GdkWindow *window,
 
   if (GDK_WINDOW_DESTROYED (window))
     return;
+
+  if (button != 1)
+    return;
+
 
   g_message("unimplemented %s", __FUNCTION__);
 }
@@ -3030,7 +2884,7 @@ gdk_window_get_frame_extents (GdkWindow    *window,
 
 /*
  * The wrapping is not perfect since gix does not give full access
- * to the current state of a window event mask etc need to fix dfb
+ * to the current state of a window event mask etc need to fix gix
  */
 GdkWindow *
 gdk_window_foreign_new_for_display (GdkDisplay* display,GdkNativeWindow anid)
@@ -3039,12 +2893,10 @@ gdk_window_foreign_new_for_display (GdkDisplay* display,GdkNativeWindow anid)
     GdkWindow              *parent =NULL;
     GdkWindowObject       *private =NULL;
     GdkWindowObject       *parent_private =NULL;
-    GdkWindowImplGix *parent_impl =NULL;
-    GdkWindowImplGix *impl =NULL;
-    //DFBWindowOptions options;
+    GdkWindowImplGIX *parent_impl =NULL;
+    GdkWindowImplGIX *impl =NULL;
     int        ret;
-    GdkDisplayDFB * gdkdisplay =  _gdk_display;
-    //gi_window_id_t dfbwindow;
+    GdkDisplayGIX * gdkdisplay =  _gdk_display;
 	gi_window_info_t winfo;
 
     window = gdk_window_lookup (anid);
@@ -3054,18 +2906,12 @@ gdk_window_foreign_new_for_display (GdkDisplay* display,GdkNativeWindow anid)
         return window;
     }
     if( display != NULL )
-            gdkdisplay = GDK_DISPLAY_DFB(display);
-
-    //ret = gdkdisplay->layer->GetWindow (gdkdisplay->layer,
-     //               (gi_window_id_t)anid,&dfbwindow); 
-	 
-	 //FIXME DPP !!!
-	 //ret  =-1;
+            gdkdisplay = GDK_DISPLAY_GIX(display);   
 
 	 ret = gi_get_window_info(anid, &winfo);
 
     if (ret != 0) {
-        GixError ("gdk_window_new: Layer->GetWindow failed", ret);
+        GixError ("gdk_window_new: Get Window imfomation failed");
         return NULL;
     }
 
@@ -3090,20 +2936,11 @@ gdk_window_foreign_new_for_display (GdkDisplay* display,GdkNativeWindow anid)
 
 	private->x = winfo.x;
 	private->y = winfo.y;
+    private->input_only = FALSE;
 	impl->drawable.width = winfo.width;
 	impl->drawable.height = winfo.height;
-	impl->drawable.format = winfo.format;
-    //dfbwindow->GetOptions(dfbwindow,&options);
-    //dfbwindow->GetPosition(dfbwindow,&private->x,&private->y);
-    //dfbwindow->GetSize(dfbwindow,&impl->drawable.width,&impl->drawable.height);
-
-
-    private->input_only = FALSE;
-
-    //if( dfbwindow->GetSurface (dfbwindow, &impl->drawable.surface) == -1 ){
-     //   private->input_only = TRUE;
-     //   impl->drawable.surface = NULL;
-    //}
+	impl->drawable.format = winfo.format; 
+ 
     /*
      * Position ourselevs
      */
@@ -3112,21 +2949,16 @@ gdk_window_foreign_new_for_display (GdkDisplay* display,GdkNativeWindow anid)
     /* We default to all events least surprise to the user 
      * minus the poll for motion events 
      */
-    gdk_window_set_events (window, (GDK_ALL_EVENTS_MASK ^ GDK_POINTER_MOTION_HINT_MASK));
+    gdk_gix_window_set_events (window, (GDK_ALL_EVENTS_MASK ^ GDK_POINTER_MOTION_HINT_MASK));
 
-    //if (impl->drawable.surface)
-    {
-      //impl->drawable.surface->GetPixelFormat (impl->drawable.surface,
-		//			      &impl->drawable.format);
 
-		impl->drawable.format = winfo.format;
+	impl->drawable.format = winfo.format;
 
-  	  private->depth = GI_RENDER_FORMAT_BPP(impl->drawable.format);
-      if( parent )
-        gdk_drawable_set_colormap (GDK_DRAWABLE (window), gdk_drawable_get_colormap (parent));
-      else
-        gdk_drawable_set_colormap (GDK_DRAWABLE (window), gdk_colormap_get_system());
-    }
+	private->depth = GI_RENDER_FORMAT_BPP(impl->drawable.format);
+	if( parent )
+		gdk_drawable_set_colormap (GDK_DRAWABLE (window), gdk_drawable_get_colormap (parent));
+	else
+		gdk_drawable_set_colormap (GDK_DRAWABLE (window), gdk_colormap_get_system());
 
     //can  be null for the soft cursor window itself when
     //running a gtk gix wm
@@ -3137,10 +2969,7 @@ gdk_window_foreign_new_for_display (GdkDisplay* display,GdkNativeWindow anid)
     if (parent_private)
         parent_private->children = g_list_prepend (parent_private->children,
                                                window);
-    //impl->dfb_id = (gi_window_id_t)anid; //FIMXE
     gdk_gix_window_id_table_insert (impl->drawable.window_id, window);
-    //gdk_gix_event_windows_add (window);
-
     return window;
 }
 
@@ -3156,11 +2985,12 @@ gdk_window_lookup (GdkNativeWindow anid)
   return gdk_gix_window_id_table_lookup ((gi_window_id_t) anid);
 }
 
-gi_window_id_t *gdk_gix_window_lookup(GdkWindow *window )
+gi_window_id_t gdk_gix_window_lookup(GdkWindow *window )
 {
   GdkWindowObject       *private;
-  GdkWindowImplGix *impl;
-  g_return_val_if_fail (GDK_IS_WINDOW (window),NULL);
+  GdkWindowImplGIX *impl;
+
+  g_return_val_if_fail (GDK_IS_WINDOW (window),0);
   private = GDK_WINDOW_OBJECT (window);
   impl = GDK_WINDOW_IMPL_GIX (private->impl);
   return impl->drawable.window_id;
@@ -3232,6 +3062,8 @@ gdk_display_warp_pointer (GdkDisplay *display,
                           gint        y)
 {
   g_warning ("gdk_display_warp_pointer() not implemented.\n");
+
+  gi_move_cursor(x,y);
 }
 
 void
@@ -3256,7 +3088,7 @@ gdk_window_impl_gix_invalidate_maybe_recurse (GdkPaintable    *paintable,
 {
   GdkWindow *window;
   GdkWindowObject *private;
-  GdkWindowImplGix *wimpl;
+  GdkWindowImplGIX *wimpl;
   GdkDrawableImplGix *impl;
 
   wimpl = GDK_WINDOW_IMPL_GIX (paintable);
@@ -3333,7 +3165,7 @@ static void
 gdk_window_impl_gix_process_updates (GdkPaintable *paintable,
                                           gboolean      update_children)
 {
-  GdkWindowImplGix *wimpl;
+  GdkWindowImplGIX *wimpl;
   GdkDrawableImplGix *impl;
   GdkWindow               *window;
   GdkWindowObject         *private;
@@ -3358,7 +3190,7 @@ gdk_window_impl_gix_process_updates (GdkPaintable *paintable,
   private->update_area = NULL;
       
   D_DEBUG_AT(  "  -> update area %4d,%4d-%4dx%4d\n",
-              GDKDFB_RECTANGLE_VALS_FROM_BOX( &update_area->extents ) );
+              GDKGIX_RECTANGLE_VALS_FROM_BOX( &update_area->extents ) );
 
   if (_gdk_event_func && gdk_window_is_viewable (window))
     {
@@ -3391,13 +3223,14 @@ gdk_window_impl_gix_process_updates (GdkPaintable *paintable,
   gdk_region_destroy (update_area);
 }
 
+#ifdef USE_GC_BODY_REGION
 
 static void
 gdk_window_impl_gix_begin_paint_region (GdkPaintable    *paintable,
                                              const GdkRegion *region)
 {
   GdkDrawableImplGix *impl;
-  GdkWindowImplGix   *wimpl;
+  GdkWindowImplGIX   *wimpl;
   gint                     i;
 
 
@@ -3409,7 +3242,7 @@ gdk_window_impl_gix_begin_paint_region (GdkPaintable    *paintable,
     return;
 
   D_DEBUG_AT(  "%s( %p ) <- %4d,%4d-%4d,%4d (%ld boxes)\n", __FUNCTION__,
-              paintable, GDKDFB_RECTANGLE_VALS_FROM_BOX(&region->extents), region->numRects );
+              paintable, GDKGIX_RECTANGLE_VALS_FROM_BOX(&region->extents), region->numRects );
 
   /* When it's buffered... */
   if (impl->buffered)
@@ -3418,7 +3251,7 @@ gdk_window_impl_gix_begin_paint_region (GdkPaintable    *paintable,
       g_assert( impl->paint_depth > 0 );
     
       D_DEBUG_AT(  "  -> painted  %4d,%4d-%4dx%4d (%ld boxes)\n",
-                  DFB_RECTANGLE_VALS_FROM_REGION( &impl->paint_region.extents ), impl->paint_region.numRects );
+                  GIX_RECTANGLE_VALS_FROM_REGION( &impl->paint_region.extents ), impl->paint_region.numRects );
 
       /* Add the new region to the paint region... */
       gdk_region_union (&impl->paint_region, region);
@@ -3438,13 +3271,13 @@ gdk_window_impl_gix_begin_paint_region (GdkPaintable    *paintable,
     }
 
   D_DEBUG_AT(  "  -> painting %4d,%4d-%4dx%4d (%ld boxes)\n",
-              DFB_RECTANGLE_VALS_FROM_REGION( &impl->paint_region.extents ), impl->paint_region.numRects );
+              GIX_RECTANGLE_VALS_FROM_REGION( &impl->paint_region.extents ), impl->paint_region.numRects );
 
   /* ...but clip the initial/compound result against the clip region. */
   gdk_region_intersect (&impl->paint_region, &impl->clip_region);
 
   D_DEBUG_AT(  "  -> clipped  %4d,%4d-%4dx%4d (%ld boxes)\n",
-              DFB_RECTANGLE_VALS_FROM_REGION( &impl->paint_region.extents ), impl->paint_region.numRects );
+              GIX_RECTANGLE_VALS_FROM_REGION( &impl->paint_region.extents ), impl->paint_region.numRects );
 
   impl->paint_depth++;
 
@@ -3454,7 +3287,7 @@ gdk_window_impl_gix_begin_paint_region (GdkPaintable    *paintable,
     {
       GdkRegionBox *box = &region->rects[i];
 
-      D_DEBUG_AT(  "  -> [%2d] %4d,%4d-%4dx%4d\n", i, GDKDFB_RECTANGLE_VALS_FROM_BOX( box ) );
+      D_DEBUG_AT(  "  -> [%2d] %4d,%4d-%4dx%4d\n", i, GDKGIX_RECTANGLE_VALS_FROM_BOX( box ) );
 
       gdk_window_clear_area (GDK_WINDOW(wimpl->gdkWindow),
                              box->x1,
@@ -3491,8 +3324,8 @@ gdk_window_impl_gix_end_paint (GdkPaintable *paintable)
                             impl->paint_region.extents.x2-1,
                             impl->paint_region.extents.y2-1 };
 
-          //printf(  "  -> flip %4d,%4d-%4dx%4d (%ld boxes)\n",
-          //            DFB_RECTANGLE_VALS_FROM_REGION( &reg ), impl->paint_region.numRects );
+          //g_print(  "  -> flip %4d,%4d-%4dx%4d (%ld boxes)\n",
+          //            GIX_RECTANGLE_VALS_FROM_REGION( &reg ), impl->paint_region.numRects );
 
 		  //gi_set_gc_clip_rectangles( gc,  &reg, 1);
 
@@ -3519,7 +3352,7 @@ gdk_window_impl_gix_end_paint (GdkPaintable *paintable)
               if (top)
                 {
                   gi_boxrec_t              reg;
-                  GdkWindowImplGix *wimpl = GDK_WINDOW_IMPL_GIX (top->impl);
+                  GdkWindowImplGIX *wimpl = GDK_WINDOW_IMPL_GIX (top->impl);
   
                   reg.x1 = impl->abs_x - top->x + impl->paint_region.extents.x1;
                   reg.y1 = impl->abs_y - top->y + impl->paint_region.extents.y1;
@@ -3527,9 +3360,9 @@ gdk_window_impl_gix_end_paint (GdkPaintable *paintable)
                   reg.y2 = impl->abs_y - top->y + impl->paint_region.extents.y2 - 1;
   
                   D_DEBUG_AT(  "  -> queue flip %4d,%4d-%4dx%4d (%ld boxes)\n",
-                              DFB_RECTANGLE_VALS_FROM_REGION( &reg ), impl->paint_region.numRects );
+                              GIX_RECTANGLE_VALS_FROM_REGION( &reg ), impl->paint_region.numRects );
   
-                  dfb_updates_add( &wimpl->flips, &reg );
+                  gix_updates_add( &wimpl->flips, &reg );
                 }
             }
   
@@ -3540,14 +3373,15 @@ gdk_window_impl_gix_end_paint (GdkPaintable *paintable)
   else
     D_DEBUG_AT(  "  -> depth is still %d\n", impl->paint_depth );
 }
-
+#endif
 
 static void
 gdk_window_impl_gix_paintable_init (GdkPaintableIface *iface)
 {
+#ifdef USE_GC_BODY_REGION
   iface->begin_paint_region = gdk_window_impl_gix_begin_paint_region;
   iface->end_paint = gdk_window_impl_gix_end_paint;
-
+#endif
   iface->invalidate_maybe_recurse = gdk_window_impl_gix_invalidate_maybe_recurse;
   iface->process_updates = gdk_window_impl_gix_process_updates;
 }

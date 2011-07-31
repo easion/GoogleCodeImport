@@ -64,9 +64,6 @@ GdkDisplay * gdk_display_open (const gchar *display_name)
 {
   int               ret;
 
-  int    argc = 0;
-  char **argv = NULL;
-
   if (_gdk_display)
     {
       return GDK_DISPLAY_OBJECT(_gdk_display); /* single display only */
@@ -74,12 +71,12 @@ GdkDisplay * gdk_display_open (const gchar *display_name)
 
   ret = gi_init ();
   if (ret <0 ) {
-      GixError ("gdk_display_open: GixInit", ret);
+      GixError ("gdk_display_open: can't open Gix device");
       return NULL;
     }
 
 
-  _gdk_display = g_object_new (GDK_TYPE_DISPLAY_DFB, NULL);
+  _gdk_display = g_object_new (GDK_TYPE_DISPLAY_GIX, NULL);
   _gdk_gix_keyboard_init ();
   _gdk_screen = g_object_new (GDK_TYPE_SCREEN, NULL);
   _gdk_visual_init ();
@@ -89,9 +86,7 @@ GdkDisplay * gdk_display_open (const gchar *display_name)
 
   _gdk_input_init ();
   _gdk_dnd_init ();
-
   _gdk_events_init ();
-  //layer->EnableCursor (layer, 1);
 
   g_signal_emit_by_name (gdk_display_manager_get (),
 			 "display_opened", _gdk_display);
@@ -100,7 +95,7 @@ GdkDisplay * gdk_display_open (const gchar *display_name)
 }
 
 GType
-gdk_display_dfb_get_type (void)
+gdk_display_gix_get_type (void)
 {
   static GType object_type = 0;
 
@@ -108,19 +103,19 @@ gdk_display_dfb_get_type (void)
     {
       static const GTypeInfo object_info =
         {
-          sizeof (GdkDisplayDFBClass),
+          sizeof (GdkDisplayGIXClass),
           (GBaseInitFunc) NULL,
           (GBaseFinalizeFunc) NULL,
           (GClassInitFunc) NULL,
           NULL,                 /* class_finalize */
           NULL,                 /* class_data */
-          sizeof (GdkDisplayDFB),
+          sizeof (GdkDisplayGIX),
           0,                    /* n_preallocs */
           (GInstanceInitFunc) NULL,
         };
 
       object_type = g_type_register_static (GDK_TYPE_DISPLAY,
-                                            "GdkDisplayDFB",
+                                            "GdkDisplayGIX",
                                             &object_info, 0);
     }
 
@@ -135,7 +130,7 @@ gdk_display_dfb_get_type (void)
 void
 _gdk_windowing_set_default_display (GdkDisplay *display)
 {
-	_gdk_display=GDK_DISPLAY_DFB(display);
+	_gdk_display=GDK_DISPLAY_GIX(display);
 }
 
 G_CONST_RETURN gchar *
@@ -144,9 +139,12 @@ gdk_display_get_name (GdkDisplay *display)
   return gdk_get_display_arg_name ();
 }
 
-int
+
+gint
 gdk_display_get_n_screens (GdkDisplay *display)
 {
+  g_return_val_if_fail (GDK_IS_DISPLAY (display), 0);
+  
   return 1;
 }
 
@@ -238,7 +236,7 @@ gdk_gix_pointer_grab (GdkWindow    *window,
                            gboolean      implicit_grab)
 {
   GdkWindow             *toplevel;
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
 
   g_assert(window);
 
@@ -252,16 +250,9 @@ gdk_gix_pointer_grab (GdkWindow    *window,
 
   toplevel = gdk_gix_window_find_toplevel (window);
   impl = GDK_WINDOW_IMPL_GIX (GDK_WINDOW_OBJECT (toplevel)->impl);
-
-  //if (impl->window)
-    {
-     // if (impl->window->GrabPointer (impl->window) == DFB_LOCKED)
-      //  return GDK_GRAB_ALREADY_GRABBED;
-    }
-#if 1
+  
 	gi_grab_pointer(impl->drawable.window_id,TRUE,FALSE,
 		GI_MASK_BUTTON_DOWN,0,GI_BUTTON_L|GI_BUTTON_R|GI_BUTTON_M);
-#endif
 
 	WARING_MSG;
 
@@ -295,7 +286,7 @@ gdk_gix_pointer_ungrab (guint32  time,
   GdkWindow             *toplevel;
   GdkWindow             *mousewin;
   GdkWindow             *old_grab_window;
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
 
   if (implicit_grab && !_gdk_gix_pointer_implicit_grab)
     return;
@@ -310,10 +301,7 @@ gdk_gix_pointer_ungrab (guint32  time,
   WARING_MSG;
 
   gi_ungrab_pointer ();
-
-  //if (impl->window)
-  //  impl->window->UngrabPointer (impl->window);
-
+  
   if (_gdk_gix_pointer_grab_confine)
     {
       g_object_unref (_gdk_gix_pointer_grab_confine);
@@ -363,7 +351,7 @@ gdk_gix_keyboard_grab (GdkDisplay *display,
                             guint32     time)
 {
   GdkWindow             *toplevel;
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
 
   g_return_val_if_fail (GDK_IS_WINDOW (window), 0);
 
@@ -377,12 +365,6 @@ gdk_gix_keyboard_grab (GdkDisplay *display,
 
   gi_grab_keyboard(impl->drawable.window_id,FALSE,0,0 );
 
-  //if (impl->window)
-    {
-      //if (impl->window->Grab_Keyboard (impl->window) == DFB_LOCKED)
-      //  return GDK_GRAB_ALREADY_GRABBED;
-    }
-
   _gdk_gix_keyboard_grab_window = g_object_ref (window);
   _gdk_gix_keyboard_grab_owner_events = owner_events;
   return GDK_GRAB_SUCCESS;
@@ -393,19 +375,15 @@ gdk_gix_keyboard_ungrab (GdkDisplay *display,
                               guint32     time)
 {
   GdkWindow             *toplevel;
-  GdkWindowImplGix *impl;
+  GdkWindowImplGIX *impl;
 
   if (!_gdk_gix_keyboard_grab_window)
     return;
 
   toplevel = gdk_gix_window_find_toplevel (_gdk_gix_keyboard_grab_window);
-  impl = GDK_WINDOW_IMPL_GIX (GDK_WINDOW_OBJECT (toplevel)->impl);
-
-  //if (impl->window)
-  //  impl->window->UngrabKeyboard (impl->window);
+  impl = GDK_WINDOW_IMPL_GIX (GDK_WINDOW_OBJECT (toplevel)->impl); 
 
   gi_ungrab_keyboard ();
-
   WARING_MSG;
 
   g_object_unref (_gdk_gix_keyboard_grab_window);
@@ -511,34 +489,6 @@ gdk_display_supports_composite (GdkDisplay *display)
     return FALSE;
 }
 
-struct _GdkWindowParentPos
-{
-  gint x;
-  gint y;
-  gint win32_x;
-  gint win32_y;
-  GdkRectangle clip_rect;
-};
-
-//typedef struct _GdkWindowQueueItem GdkWindowQueueItem;
-typedef struct _GdkWindowParentPos GdkWindowParentPos;
-
-void
-_gdk_window_init_position (GdkWindow *window)
-{
-  GdkWindowParentPos parent_pos;
-  GdkWindowImplGix *impl;
-  
-  g_return_if_fail (GDK_IS_WINDOW (window));
-  
-  impl =
-    GDK_WINDOW_IMPL_GIX (GDK_WINDOW_OBJECT (window)->impl);
-
-  //fixme dpp
-  
-  //gdk_window_compute_parent_pos (impl, &parent_pos);
-  //gdk_window_compute_position (impl, &parent_pos, &impl->position_info);
-}
 
 
 #define __GDK_DISPLAY_X11_C__

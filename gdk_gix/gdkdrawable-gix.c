@@ -24,10 +24,9 @@
 
 /*
  * GTK+ Gix backend
- * Copyright (C) 2001-2002  convergence integrated media GmbH
- * Copyright (C) 2002-2004  convergence GmbH
- * Written by Denis Oliver Kropp <dok@convergence.de> and
- *            Sven Neumann <sven@convergence.de>
+ * Copyright (C) 2011 www.hanxuantech.com.
+ * Written by Easion <easion@hanxuantech.com> , it's based
+ * on DirectFB port.
  */
 
 #include "config.h"
@@ -50,13 +49,13 @@
 #include <cairo-gix.h>
 
 
-#define D_DEBUG_AT //printf
-#define ATTCH_WINDOW(gc,win,region) do{\
+
+#define ATTCH_WINDOW(gc,win) do{\
 	err = gi_gc_attch_window(gc,win);\
 	if (win == GI_DESKTOP_WINDOW_ID)\
-	 printf("%s: line%d gi_gc_attch_window on GI_DESKTOP_WINDOW_ID!\n",__FUNCTION__,__LINE__);\
+	 g_print("%s: line%d gc attch window on root window!\n",__FUNCTION__,__LINE__);\
 	if (err){\
-		printf("%s: gi_gc_attch_window FAILED!\n",__FUNCTION__,__LINE__);\
+		g_print("%s: line %d gc attch window on(%d) FAILED!\n",__FUNCTION__,__LINE__,win);\
 		return;\
 	}\
 	}\
@@ -140,7 +139,6 @@ static void gdk_gix_draw_lines (GdkDrawable *drawable,
 static cairo_surface_t *gdk_gix_ref_cairo_surface (GdkDrawable *drawable);
 
 
-//static gboolean  accelerated_alpha_blending = FALSE;
 static gpointer  parent_class               = NULL;
 static const cairo_user_data_key_t gdk_gix_cairo_key;
 
@@ -233,6 +231,7 @@ gdk_gix_get_visual (GdkDrawable *drawable)
 /* Calculates the real clipping region for a drawable, taking into account
  * other windows and the gc clip region.
  */
+#ifdef USE_GC_BODY_REGION
 void
 gdk_gix_clip_region (GdkDrawable  *drawable,
                           GdkGC        *gc,
@@ -266,7 +265,7 @@ gdk_gix_clip_region (GdkDrawable  *drawable,
 
   if (private->buffered) {
        D_DEBUG_AT(  "  -> buffered region   > %4d,%4d - %4dx%4d <  (%ld boxes)\n",
-                   GDKDFB_RECTANGLE_VALS_FROM_BOX( &private->paint_region.extents ),
+                   GDKGIX_RECTANGLE_VALS_FROM_BOX( &private->paint_region.extents ),
                    private->paint_region.numRects );
 
     gdk_region_intersect (ret_clip, &private->paint_region);
@@ -280,7 +279,7 @@ gdk_gix_clip_region (GdkDrawable  *drawable,
       if (region->numRects)
         {
           D_DEBUG_AT(  "  -> clipping region   > %4d,%4d - %4dx%4d <  (%ld boxes)\n",
-                      GDKDFB_RECTANGLE_VALS_FROM_BOX( &region->extents ), region->numRects );
+                      GDKGIX_RECTANGLE_VALS_FROM_BOX( &region->extents ), region->numRects );
 
           if (gc->clip_x_origin || gc->clip_y_origin)
             {
@@ -301,7 +300,7 @@ gdk_gix_clip_region (GdkDrawable  *drawable,
 
   if (private->buffered) {
        D_DEBUG_AT(  "  => returning clip   >> %4d,%4d - %4dx%4d << (%ld boxes)\n",
-                   GDKDFB_RECTANGLE_VALS_FROM_BOX( &ret_clip->extents ), ret_clip->numRects );
+                   GDKGIX_RECTANGLE_VALS_FROM_BOX( &ret_clip->extents ), ret_clip->numRects );
     return;
   }
 
@@ -336,108 +335,14 @@ gdk_gix_clip_region (GdkDrawable  *drawable,
           temp.extents.y2 = cur_private->y + cur_impl->height;
 
           D_DEBUG_AT(  "  -> clipping child    [ %4d,%4d - %4dx%4d ]  (%ld boxes)\n",
-                      GDKDFB_RECTANGLE_VALS_FROM_BOX( &temp.extents ), temp.numRects );
+                      GDKGIX_RECTANGLE_VALS_FROM_BOX( &temp.extents ), temp.numRects );
 
           gdk_region_subtract (ret_clip, &temp);
         }
     }
 
   D_DEBUG_AT(  "  => returning clip   >> %4d,%4d - %4dx%4d << (%ld boxes)\n",
-              GDKDFB_RECTANGLE_VALS_FROM_BOX( &ret_clip->extents ), ret_clip->numRects );
-}
-
-/* Drawing
- */
-#if 0
-
-static inline void
-gdk_gix_set_color (GdkDrawableImplGix *impl,
-                        GdkColor                *color,
-                        guchar                   alpha)
-{
-	gi_color_t gcolor;
-
-  if (DFB_PIXELFORMAT_IS_INDEXED (impl->format))
-    {
-	  printf("gdk_gix_set_color : DFB_PIXELFORMAT_IS_INDEXED NOT IMPEL\n");
-      //impl->surface->SetColorIndex (impl->surface, color->pixel);
-    }
-  else
-    {
-	  gcolor = GI_ARGB (alpha,color->red   >> 8,
-                               color->green >> 8,
-                               color->blue  >> 8);
-
-	  gi_set_gc_foreground (impl->gix_gc, gcolor);  
-      /*impl->surface->SetColor (impl->surface,
-                               color->red   >> 8,
-                               color->green >> 8,
-                               color->blue  >> 8,
-                               alpha);
-							   */
-    }
-}
-
-static gboolean
-gdk_gix_setup_for_drawing (GdkDrawableImplGix *impl,
-                                GdkGCGix           *gc_private)
-{
-  DFBSurfaceDrawingFlags flags = DSDRAW_NOFX;
-  GdkColor               color = { 0, 0, 0, 0 };
-  guchar                 alpha = 0xFF;
-
-  if (!impl->surface)
-    return FALSE;
-
-  if (gc_private && gc_private->values_mask & GDK_GC_FOREGROUND)
-    color = gc_private->values.foreground;
-
-  if (gc_private && gc_private->values_mask & GDK_GC_FUNCTION)
-    {
-      switch (gc_private->values.function)
-        {
-        case GDK_COPY:
-          flags = GI_MODE_SET;
-          break;
-
-        case GDK_INVERT:
-          color.red = color.green = color.blue = 0xFFFF;
-          alpha = 0x0;
-          flags = GI_MODE_XOR;
-          break;
-
-        case GDK_XOR:
-          alpha = 0x0;
-          flags = GI_MODE_XOR;
-          break;
-
-        case GDK_CLEAR:
-          color.red = color.green = color.blue = 0x0;
-          flags = GI_MODE_SET;
-          break;
-
-        case GDK_NOOP:
-          return FALSE;
-
-        case GDK_SET:
-          color.red = color.green = color.blue = 0xFFFF;
-          flags = GI_MODE_SET;
-          break;
-
-        default:
-          g_message ("unsupported GC function %d",
-                     gc_private->values.function);
-          flags = GI_MODE_SET;
-          break;
-        }
-    }
-
-  gdk_gix_set_color (impl, &color, alpha);
-  gi_set_gc_function(impl->gix_gc,flags);
-
-  //impl->surface->SetDrawingFlags (impl->surface, flags);
-
-  return TRUE;
+              GDKGIX_RECTANGLE_VALS_FROM_BOX( &ret_clip->extents ), ret_clip->numRects );
 }
 #endif
 
@@ -453,25 +358,28 @@ gdk_gix_draw_rectangle (GdkDrawable *drawable,
   GdkDrawableImplGix *impl;
   GdkGCGix           *gc_private = NULL;  
   int err;
-  GdkColor               color = { 0, 0, 0, 0 };
+  //GdkColor               color = { 0, 0, 0, 0 };
 
   impl = GDK_DRAWABLE_IMPL_GIX (drawable);
 
   gc_private = GDK_GC_GIX (gc);
-  ATTCH_WINDOW((gc_private->gix_gc),impl->window_id,gc_private->clip_region);
-#if 0  
-  printf("_gdk_gix_draw_rectangle window_tl = %x,fill%d, (%d,%d,%d,%d) \n",
-	  impl->window_id,filled, x, y, width, height);
-#endif  
+  ATTCH_WINDOW(GDK_GC_GET_XGC (gc),impl->window_id);
+
   if (filled){
-    err = gi_fill_rect ( ((gc_private->gix_gc)), x, y, width, height);
-	if (err)
-	{
-		printf("gi_fill_rect: failed %d\n", err);
-	}
+    err = gi_fill_rect ( GDK_GC_GET_XGC (gc), x, y, width, height);	
   }
-  else
-    err = gi_draw_rect ( (gc_private->gix_gc) , x, y, width, height);
+  else{
+    err = gi_draw_rect ( GDK_GC_GET_XGC (gc) , x, y, width, height);
+  }
+
+#if 1  
+  if (err)
+  {
+  perror("gdk_gix_draw_rectangle: failed\n");
+  g_print("_gdk_gix_draw_rectangle window_tl = %x,fill%d, (%d,%d,%d,%d) \n",
+	  impl->window_id,filled, x, y, width, height);
+  }
+#endif  
 }
 
 
@@ -493,16 +401,21 @@ gdk_gix_draw_arc (GdkDrawable *drawable,
   impl = GDK_DRAWABLE_IMPL_GIX (drawable);
 
   gc_private = GDK_GC_GIX (gc);
-  ATTCH_WINDOW((gc_private->gix_gc),impl->window_id,gc_private->clip_region);
+  ATTCH_WINDOW(GDK_GC_GET_XGC (gc),impl->window_id);
 
   D_UNIMPLEMENTED;
 
   if (filled)
-    gi_fill_arc ( impl->window_id,
+    err = gi_fill_arc ( impl->window_id,
 	      GDK_GC_GET_XGC (gc), x, y, width, height, angle1, angle2);
   else
-    gi_draw_arc ( impl->window_id,
+    err = gi_draw_arc ( impl->window_id,
 	      GDK_GC_GET_XGC (gc), x, y, width, height, angle1, angle2);
+
+  if (err)
+  {
+	  perror("gdk_gix_draw_arc");
+  }
 
 }
 
@@ -520,7 +433,7 @@ gdk_gix_draw_polygon (GdkDrawable    *drawable,
   D_UNIMPLEMENTED;
 
   impl = GDK_DRAWABLE_IMPL_GIX (drawable);
-  ATTCH_WINDOW(GDK_GC_GET_XGC (gc),impl->window_id,gc_private->clip_region);
+  ATTCH_WINDOW(GDK_GC_GET_XGC (gc),impl->window_id);
 
   
   if (!filled &&
@@ -544,15 +457,17 @@ gdk_gix_draw_polygon (GdkDrawable    *drawable,
     }
   
   if (filled)
-    gi_fill_polygon ( 
+    err = gi_fill_polygon ( 
 		  GDK_GC_GET_XGC (gc), tmp_points, tmp_npoints, GI_SHAPE_Complex, GI_POLY_CoordOrigin);
   else
-    gi_draw_lines ( 
+    err = gi_draw_lines ( 
 		GDK_GC_GET_XGC (gc), tmp_points, tmp_npoints);
 
   g_free (tmp_points);
-
-
+  if (err)
+  {
+	  perror("gdk_gix_draw_polygon");
+  }
 }
 
 static void
@@ -591,17 +506,18 @@ gdk_gix_draw_drawable (GdkDrawable *drawable,
 {
   GdkDrawableImplGix *impl;
   GdkDrawableImplGix *src_impl;
-  GdkRegion               *clip;
+  //GdkRegion               *clip;
   int src_depth = gdk_drawable_get_depth (src);
   int dest_depth = gdk_drawable_get_depth (drawable);
 
-  GdkRectangle             dest_rect = { xdest,
+  /*GdkRectangle             dest_rect = { xdest,
                                          ydest, 
                                          xdest + width  - 1,
                                          ydest + height - 1 };
+										 */
 
   //gi_cliprect_t rect = { xsrc, ysrc, width, height };
-  gint i,err = 0;
+  gint err = 0;
 
   impl = GDK_DRAWABLE_IMPL_GIX (drawable);
 
@@ -612,19 +528,9 @@ gdk_gix_draw_drawable (GdkDrawable *drawable,
   else if (GDK_IS_DRAWABLE_IMPL_GIX (src))
     src_impl = GDK_DRAWABLE_IMPL_GIX (src);
   else
-    return;
+    return;		 
 
-
-  /*printf("gdk_gix_draw_drawable src=%x, ###dst=%x,  (%d,%d,%d,%d,%d,%d)\n", 
-	  src_impl ? src_impl->window_id : 0,
-		 impl->window_id,
-		 xsrc, ysrc,
-		 width, height,
-		 xdest, ydest);
-		 */
-		 
-
-  ATTCH_WINDOW(GDK_GC_GET_XGC (gc),impl->window_id,gc_private->clip_region);
+  ATTCH_WINDOW(GDK_GC_GET_XGC (gc),impl->window_id);
  
 
   if (src_depth == 1)
@@ -651,8 +557,14 @@ gdk_gix_draw_drawable (GdkDrawable *drawable,
 
   if (err)
   {
-	  perror("gi_copy_area #1");
-	  D_UNIMPLEMENTED;
+	  perror("gdk_gix_draw_drawable #1");
+	    /*g_print("gdk_gix_draw_drawable src=%x, ###dst=%x,  (%d,%d,%d,%d,%d,%d)\n", 
+	  src_impl ? src_impl->window_id : 0,
+		 impl->window_id,
+		 xsrc, ysrc,
+		 width, height,
+		 xdest, ydest);
+		 */
   }
 
 
@@ -666,14 +578,14 @@ gdk_gix_draw_points (GdkDrawable *drawable,
 		     gint         npoints)
 {
   GdkDrawableImplGix *impl;
-  GdkRegion               *clip;
+  //GdkRegion               *clip;
   int err;
 
   if (npoints < 1)
     return;
 
   impl = GDK_DRAWABLE_IMPL_GIX (drawable);
-  ATTCH_WINDOW(GDK_GC_GET_XGC (gc),impl->window_id,gc_private->clip_region);
+  ATTCH_WINDOW(GDK_GC_GET_XGC (gc),impl->window_id);
  
   
   /* We special-case npoints == 1, because X will merge multiple
@@ -721,10 +633,9 @@ gdk_gix_draw_segments (GdkDrawable    *drawable,
   gi_point_t pts[2];
   int i, err;
   GdkDrawableImplGix *impl;
-  //printf("%s: got line%d nsegs=%d\n",__FUNCTION__,__LINE__,nsegs);
 
   impl = GDK_DRAWABLE_IMPL_GIX (drawable);
-  ATTCH_WINDOW(GDK_GC_GET_XGC (gc),impl->window_id,gc_private->clip_region);
+  ATTCH_WINDOW(GDK_GC_GET_XGC (gc),impl->window_id);
 
   for(i = 0; i < nsegs; i++)
     {
@@ -745,18 +656,17 @@ gdk_gix_draw_lines (GdkDrawable *drawable,
                          gint         npoints)
 {
   GdkDrawableImplGix *impl;
-  gint                     i;
+ // gint                     i;
   gi_point_t beg, end;
   int err;
 
-  printf("gdk_gix_draw_lines = %d\n", npoints);
+  g_print("gdk_gix_draw_lines = %d\n", npoints);
 
   impl = GDK_DRAWABLE_IMPL_GIX (drawable);
 
   beg.x = points->x;
 	beg.y = points->y;
-	ATTCH_WINDOW(GDK_GC_GET_XGC (gc),impl->window_id,gc_private->clip_region);
-
+	ATTCH_WINDOW(GDK_GC_GET_XGC (gc),impl->window_id);
 
   
   ++points;
@@ -787,13 +697,13 @@ gdk_gix_draw_image (GdkDrawable *drawable,
 {
   GdkDrawableImplGix *impl;
   GdkImageGix        *image_private;
-  GdkRegion                clip;
-  GdkRectangle             dest_rect = { xdest, ydest, width, height };
+  //GdkRegion                clip;
+  //GdkRectangle             dest_rect = { xdest, ydest, width, height };
 
-  gint pitch = 0;
-  gint i;
+  //gint pitch = 0;
+  //gint i;
   GdkGCGix           *gc_private = NULL;
-  int err;
+  int err = 0;
 
   gc_private = GDK_GC_GIX (gc);
 
@@ -806,10 +716,16 @@ gdk_gix_draw_image (GdkDrawable *drawable,
   impl = GDK_DRAWABLE_IMPL_GIX (drawable);
   image_private = image->windowing_data;
 
-  ATTCH_WINDOW(gc_private->gix_gc,impl->window_id,gc_private->clip_region);
+  ATTCH_WINDOW(GDK_GC_GET_XGC (gc),impl->window_id);
  
   if(image_private->surface_img)
-    gi_bitblt_bitmap( (gc_private->gix_gc),xsrc, ysrc,width, height,image_private->surface_img,xdest, ydest);
+    err = gi_bitblt_image( GDK_GC_GET_XGC (gc),xsrc, ysrc,
+	  width, height,image_private->surface_img,xdest, ydest);
+
+  if (err)
+  {
+	  perror("gdk_gix_draw_image");
+  }
 
 
 }
@@ -832,8 +748,8 @@ composite_565(guchar      *src_buf,
   while (height--)
     {
       gint twidth = width;   
-	  uint32_t *p = src;
-	  uint16_t *q = dest;
+	  uint32_t *p = (uint32_t *)src;
+	  uint16_t *q = (uint16_t *)dest;
 
 	  while (twidth--)
 		{
@@ -863,13 +779,11 @@ composite_0888 (guchar      *src_buf,
   while (height--)
     {
       gint twidth = width;   
-	  uint32_t *p = src;
-	  uint32_t *q = dest;
+	  uint32_t *p = (uint32_t *)src;
+	  uint32_t *q = (uint32_t *)dest;
 
 	  while (twidth--)
 		{
-		  //guint t;
-		  //t = *p;
 		  *q = GI_ARGB(GI_ALPHA(*p), GI_BLUE(*p),GI_GREEN(*p),GI_RED(*p));
 		  q++;
 		  p++;            
@@ -942,9 +856,7 @@ gdk_gix_draw_pixbuf (GdkDrawable  *drawable,
                           gint          x_dither,
                           gint          y_dither)
 {
-  //GdkPixbuf *composited = NULL;
   GdkDrawableImplGix *impl = GDK_DRAWABLE_IMPL_GIX (drawable);
-  //gi_image_t img;
   gi_image_t *gimg = NULL;
   int err;
   unsigned gformat;
@@ -1051,8 +963,8 @@ gdk_gix_draw_pixbuf (GdkDrawable  *drawable,
                                   width, height);
 	}
   
-  ATTCH_WINDOW(GDK_GC_GET_XGC (gc),impl->window_id,gc_private->clip_region);
-  gi_bitblt_bitmap( GDK_GC_GET_XGC (gc),src_x, src_y,width, height,
+  ATTCH_WINDOW(GDK_GC_GET_XGC (gc),impl->window_id);
+  err = gi_bitblt_image( GDK_GC_GET_XGC (gc),src_x, src_y,width, height,
 	  gimg,dest_x, dest_y);
 
   gi_destroy_image(gimg);
@@ -1095,10 +1007,7 @@ gdk_drawable_impl_gix_finalize (GObject *object)
 	cairo_surface_finish(impl->cairo_surface);
   }
 
-  //WARING_MSG;
-
-  //if( impl->surface )
-  //	impl->surface->Release (impl->surface);
+  //WARING_MSG; 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
 
@@ -1122,10 +1031,6 @@ gdk_drawable_impl_gix_class_init (GdkDrawableImplGixClass *klass)
   drawable_class->draw_points    = gdk_gix_draw_points;
   drawable_class->draw_segments  = gdk_gix_draw_segments;
   drawable_class->draw_lines     = gdk_gix_draw_lines;
-#if 0
-  drawable_class->draw_glyphs    = NULL;
-  drawable_class->draw_glyphs_transformed    = NULL;
-#endif
   drawable_class->draw_image     = gdk_gix_draw_image;
 
   drawable_class->ref_cairo_surface = gdk_gix_ref_cairo_surface;
@@ -1134,25 +1039,13 @@ gdk_drawable_impl_gix_class_init (GdkDrawableImplGixClass *klass)
 
   drawable_class->get_depth      = gdk_gix_get_depth;
   drawable_class->get_visual     = gdk_gix_get_visual;
-
   drawable_class->get_size       = gdk_gix_get_size;
 
   drawable_class->_copy_to_image = _gdk_gix_copy_to_image;
-        drawable_class->get_screen = gdk_gix_get_screen;
-
+  drawable_class->get_screen = gdk_gix_get_screen;
 
   real_draw_pixbuf = drawable_class->draw_pixbuf;
-  drawable_class->draw_pixbuf = gdk_gix_draw_pixbuf;
-
-  /* check for hardware-accelerated alpha-blending */
-  /*{
-    DFBGraphicsDeviceDescription desc;
-                _gdk_display->gix->GetDeviceDescription ( _gdk_display->gix, &desc);
-
-    accelerated_alpha_blending =
-      ((desc.acceleration_mask & DFXL_BLIT) &&
-       (desc.blitting_flags & DSBLIT_BLEND_ALPHACHANNEL));
-  }*/
+  drawable_class->draw_pixbuf = gdk_gix_draw_pixbuf; 
 }
 
 GType
@@ -1199,22 +1092,14 @@ static cairo_surface_t *
 gdk_gix_ref_cairo_surface (GdkDrawable *drawable)
 {
   GdkDrawableImplGix *impl;
-  //IGix               *dfb;
   
   g_return_val_if_fail (GDK_IS_DRAWABLE (drawable), NULL);
   g_return_val_if_fail (GDK_IS_DRAWABLE_IMPL_GIX (drawable), NULL);
 
   impl = GDK_DRAWABLE_IMPL_GIX (drawable);
-  //dfb = GDK_DISPLAY_DFB(gdk_drawable_get_display(drawable))->gix;
   
   if (!impl->cairo_surface) {
-    //IGixSurface *surface;
-    //g_assert (impl->surface != NULL);
-#if defined(CAIRO_VERSION_CODE) && CAIRO_VERSION_CODE >= CAIRO_VERSION_ENCODE(1,5,5)
-    //impl->surface->GetSubSurface (impl->surface, NULL, &surface);
-#else
-    //surface = impl->surface;
-#endif
+
     if (impl->window_id) {
       impl->cairo_surface = cairo_gix_surface_create (impl->window_id);
       if (impl->cairo_surface) {
@@ -1222,9 +1107,7 @@ gdk_gix_ref_cairo_surface (GdkDrawable *drawable)
                                      &gdk_gix_cairo_key, drawable, 
                                      gdk_gix_cairo_surface_destroy);
       }
-#if defined(CAIRO_VERSION_CODE) && CAIRO_VERSION_CODE >= CAIRO_VERSION_ENCODE(1,5,5)
-      //surface->Release (surface);
-#endif
+
     }
   } else {
     cairo_surface_reference (impl->cairo_surface);

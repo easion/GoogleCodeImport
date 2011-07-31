@@ -18,16 +18,10 @@
  */
 
 /*
- * Modified by the GTK+ Team and others 1997-2000.  See the AUTHORS
- * file for a list of people on the GTK+ Team.
- */
-
-/*
  * GTK+ Gix backend
- * Copyright (C) 2001-2002  convergence integrated media GmbH
- * Copyright (C) 2002-2004  convergence GmbH
- * Written by Denis Oliver Kropp <dok@convergence.de> and
- *            Sven Neumann <sven@convergence.de>
+ * Copyright (C) 2011 www.hanxuantech.com.
+ * Written by Easion <easion@hanxuantech.com> , it's based
+ * on DirectFB port.
  */
 
 #include "config.h"
@@ -40,30 +34,30 @@ static GHashTable *window_id_ht = NULL;
 
 
 void
-gdk_gix_window_id_table_insert (gi_window_id_t  dfb_id,
+gdk_gix_window_id_table_insert (gi_window_id_t  gix_id,
                                      GdkWindow   *window)
 {
   if (!window_id_ht)
     window_id_ht = g_hash_table_new (g_direct_hash, g_direct_equal);
 
-  g_hash_table_insert (window_id_ht, GUINT_TO_POINTER (dfb_id), window);
+  g_hash_table_insert (window_id_ht, GUINT_TO_POINTER (gix_id), window);
 }
 
 void
-gdk_gix_window_id_table_remove (gi_window_id_t dfb_id)
+gdk_gix_window_id_table_remove (gi_window_id_t gix_id)
 {
   if (window_id_ht)
-    g_hash_table_remove (window_id_ht, GUINT_TO_POINTER (dfb_id));
+    g_hash_table_remove (window_id_ht, GUINT_TO_POINTER (gix_id));
 }
 
 GdkWindow *
-gdk_gix_window_id_table_lookup (gi_window_id_t dfb_id)
+gdk_gix_window_id_table_lookup (gi_window_id_t gix_id)
 {
   GdkWindow *window = NULL;
 
   if (window_id_ht)
     window = (GdkWindow *) g_hash_table_lookup (window_id_ht,
-                                                GUINT_TO_POINTER (dfb_id));
+                                                GUINT_TO_POINTER (gix_id));
 
   return window;
 }

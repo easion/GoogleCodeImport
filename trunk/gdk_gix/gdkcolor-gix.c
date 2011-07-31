@@ -127,6 +127,7 @@ gdk_colormap_new (GdkVisual *visual,
 {
   GdkColormap *colormap;
   gint         i;
+  //FIXME
 
   g_return_val_if_fail (visual != NULL, NULL);
 
@@ -139,7 +140,6 @@ gdk_colormap_new (GdkVisual *visual,
     case GDK_VISUAL_PSEUDO_COLOR:
       {
         GdkColormapPrivateGix *private;
-        //DFBPaletteDescription       dsc;
 
         colormap->colors = g_new0 (GdkColor, colormap->size);
 
@@ -152,11 +152,7 @@ gdk_colormap_new (GdkVisual *visual,
             private->info[0].ref_count++;
           }
 
-        //dsc.flags = DPDESC_SIZE;
-        //dsc.size  = colormap->size;
-        //_gdk_display->gix->CreatePalette (
-		//_gdk_display->gix, &dsc, &private->palette);
-
+       
         colormap->windowing_data = private;
 
         gdk_gix_allocate_color_key (colormap);
@@ -211,10 +207,8 @@ gdk_screen_get_system_colormap (GdkScreen *screen)
           colormap->colors = g_new0 (GdkColor, colormap->size);
 
           private = g_new0 (GdkColormapPrivateGix, 1);
-          private->info = g_new0 (GdkColorInfo, colormap->size);
-	
-          //surface=GDK_WINDOW_IMPL_GIX (
-			//	GDK_WINDOW_OBJECT (_gdk_parent_root)->impl)->drawable.surface;
+          private->info = g_new0 (GdkColorInfo, colormap->size);	
+         
           //surface->GetPalette (surface, &private->palette);
 
           colormap->windowing_data = private;
@@ -382,13 +376,14 @@ gdk_color_change (GdkColormap *colormap,
 
   if (private->info[color->pixel].flags & GDK_COLOR_WRITEABLE)
     {
-      DFBColor  entry = { 0xFF,
+      /*GIXColor  entry = { 0xFF,
                           color->red   >> 8,
                           color->green >> 8,
                           color->blue  >> 8 };
 
-      //if (palette->SetEntries (palette, &entry, 1, color->pixel) != DFB_OK)
+      //if (palette->SetEntries (palette, &entry, 1, color->pixel) != GIX_OK)
       //  return FALSE;
+	  */
 
       colormap->colors[color->pixel] = *color;
       return TRUE;
@@ -478,10 +473,11 @@ gdk_colormap_alloc_pseudocolors (GdkColormap *colormap,
   for (i = 0; i < ncolors; i++)
     {
       guint     index;
-      DFBColor  lookup = { 0xFF,
+      /*GIXColor  lookup = { 0xFF,
                            colors[i].red   >> 8,
                            colors[i].green >> 8,
                            colors[i].blue  >> 8 };
+						   */
 
       success[i] = FALSE;
 
@@ -505,10 +501,6 @@ gdk_colormap_alloc_pseudocolors (GdkColormap *colormap,
         }
       else
         {
-          //palette->FindBestMatch (palette,
-           //                       lookup.r, lookup.g, lookup.b, lookup.a,
-           //                       &index);
-
           if (index < 0 || index > colormap->size)
             continue;
 
@@ -516,18 +508,8 @@ gdk_colormap_alloc_pseudocolors (GdkColormap *colormap,
           if (private->info[index].ref_count &&
               !(private->info[index].flags & GDK_COLOR_WRITEABLE))
             {
-              /*DFBColor  entry;
-
-              palette->GetEntries (palette, &entry, 1, index);
-
-              if (entry.a == 0xFF &&
-                  entry.r == lookup.r && entry.g == lookup.g && entry.b == lookup.b)
-                {
-                  colors[i].pixel = index;
-
-                  goto allocated;
-                }
-				*/
+			  //FIXME
+              
             }
 
           /* look for an empty slot and allocate a new color */
@@ -586,12 +568,10 @@ static void
 gdk_gix_allocate_color_key (GdkColormap *colormap)
 {
   GdkColormapPrivateGix *private = colormap->windowing_data;
-  IGixPalette           *palette = private->palette;
+  //IGixPalette           *palette = private->palette;
 
   if (!gdk_gix_enable_color_keying)
     return;
-
-  //palette->SetEntries (palette, &gdk_gix_bg_color, 1, 255);
 
   colormap->colors[255].pixel = 255;
   colormap->colors[255].red   = ((gdk_gix_bg_color_key.r << 8)

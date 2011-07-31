@@ -15,8 +15,8 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef GDK_DISPLAY_DFB_H
-#define GDK_DISPLAY_DFB_H
+#ifndef GDK_DISPLAY_GIX_H
+#define GDK_DISPLAY_GIX_H
 
 #include <gi/gi.h>
 #include <gi/property.h>
@@ -27,37 +27,42 @@
 
 G_BEGIN_DECLS
 
-typedef struct _GdkDisplayDFB GdkDisplayDFB;
-typedef struct _GdkDisplayDFBClass GdkDisplayDFBClass;
+typedef struct _GdkDisplayGIX GdkDisplayGIX;
+typedef struct _GdkDisplayGIXClass GdkDisplayGIXClass;
 
 
-#define GDK_TYPE_DISPLAY_DFB              (gdk_display_dfb_get_type())
-#define GDK_DISPLAY_DFB(object)           (G_TYPE_CHECK_INSTANCE_CAST ((object), GDK_TYPE_DISPLAY_DFB, GdkDisplayDFB))
-#define GDK_DISPLAY_DFB_CLASS(klass)      (G_TYPE_CHECK_CLASS_CAST ((klass), GDK_TYPE_DISPLAY_DFB, GdkDisplayDFBClass))
-#define GDK_IS_DISPLAY_DFB(object)        (G_TYPE_CHECK_INSTANCE_TYPE ((object), GDK_TYPE_DISPLAY_DFB))
-#define GDK_IS_DISPLAY_DFB_CLASS(klass)   (G_TYPE_CHECK_CLASS_TYPE ((klass), GDK_TYPE_DISPLAY_DFB))
-#define GDK_DISPLAY_DFB_GET_CLASS(obj)    (G_TYPE_INSTANCE_GET_CLASS ((obj), GDK_TYPE_DISPLAY_DFB, GdkDisplayDFBClass))
+#define GDK_TYPE_DISPLAY_GIX              (gdk_display_gix_get_type())
+#define GDK_DISPLAY_GIX(object)           (G_TYPE_CHECK_INSTANCE_CAST ((object), GDK_TYPE_DISPLAY_GIX, GdkDisplayGIX))
+#define GDK_DISPLAY_GIX_CLASS(klass)      (G_TYPE_CHECK_CLASS_CAST ((klass), GDK_TYPE_DISPLAY_GIX, GdkDisplayGIXClass))
+#define GDK_IS_DISPLAY_GIX(object)        (G_TYPE_CHECK_INSTANCE_TYPE ((object), GDK_TYPE_DISPLAY_GIX))
+#define GDK_IS_DISPLAY_GIX_CLASS(klass)   (G_TYPE_CHECK_CLASS_TYPE ((klass), GDK_TYPE_DISPLAY_GIX))
+#define GDK_DISPLAY_GIX_GET_CLASS(obj)    (G_TYPE_INSTANCE_GET_CLASS ((obj), GDK_TYPE_DISPLAY_GIX, GdkDisplayGIXClass))
 
-struct _GdkDisplayDFB
+struct _GdkDisplayGIX
 {
   GdkDisplay parent;
-  int sock_id;
-  //IGix              *gix;
-  //IGixDisplayLayer  *layer;
-  //IGixEventBuffer   *buffer;
-  //IGixInputDevice   *keyboard;
+  int sock_id;  
   GdkKeymap *keymap;
+
+  /* X ID hashtable */
+  GHashTable *xid_ht;
+  /* translation queue */
+  GQueue *translate_queue;
+
+  /* Mapping to/from virtual atoms */
+  GHashTable *atom_from_virtual;
+  GHashTable *atom_to_virtual;
 };
 
-struct _GdkDisplayDFBClass
+struct _GdkDisplayGIXClass
 {
   GdkDisplayClass parent;
 };
 
-GType      gdk_display_dfb_get_type            (void);
+GType      gdk_display_gix_get_type            (void);
 
-//IGixSurface * gdk_display_dfb_create_surface (GdkDisplayDFB *display,int format,int width, int height);
-
+void
+_gdk_window_init_position (GdkWindow *window);
 G_END_DECLS
 
-#endif /* GDK_DISPLAY_DFB_H */
+#endif /* GDK_DISPLAY_GIX_H */

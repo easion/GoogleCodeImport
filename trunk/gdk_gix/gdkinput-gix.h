@@ -17,18 +17,6 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/*
- * Modified by the GTK+ Team and others 1997-2000.  See the AUTHORS
- * file for a list of people on the GTK+ Team.
- */
-
-/*
- * GTK+ Gix backend
- * Copyright (C) 2001-2002  convergence integrated media GmbH
- * Copyright (C) 2002       convergence GmbH
- * Written by Denis Oliver Kropp <dok@convergence.de> and
- *            Sven Neumann <sven@convergence.de>
- */
 
 #ifndef __GDK_INPUT_GIX_H__
 #define __GDK_INPUT_GIX_H__
@@ -138,7 +126,7 @@ gint             gdk_input_common_other_event (GdkEvent         *event,
 void         _gdk_gix_keyboard_init      (void);
 void         _gdk_gix_keyboard_exit      (void);
 
-void         gdk_gix_translate_key_event (gi_msg_t   *dfb_event,
+void         gdk_gix_translate_key_event (gi_msg_t   *gix_event,
                                                GdkEventKey      *event);
 
 #endif /* __GDK_INPUT_GIX_H__ */

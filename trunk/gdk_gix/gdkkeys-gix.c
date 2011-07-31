@@ -22,12 +22,12 @@
  * file for a list of people on the GTK+ Team.
  */
 
+
 /*
  * GTK+ Gix backend
- * Copyright (C) 2001-2002  convergence integrated media GmbH
- * Copyright (C) 2002       convergence GmbH
- * Written by Denis Oliver Kropp <dok@convergence.de> and
- *            Sven Neumann <sven@convergence.de>
+ * Copyright (C) 2011 www.hanxuantech.com.
+ * Written by Easion <easion@hanxuantech.com> , it's based
+ * on DirectFB port.
  */
 
 #include "config.h"
@@ -50,6 +50,49 @@ GdkModifierType  _gdk_gix_modifiers = 0;
 static guint     *gix_keymap        = NULL;
 static gint       gix_min_keycode   = 0;
 static gint       gix_max_keycode   = 0;
+
+
+
+gint
+build_pointer_event_state (unsigned button_flags, unsigned key_flags)
+{
+  gint state;
+  gint ks;
+  
+  ks = state = 0;
+
+  if   (button_flags & GI_BUTTON_L)
+    state |= GDK_BUTTON1_MASK;
+
+  if (button_flags & GI_BUTTON_M)
+    state |= GDK_BUTTON2_MASK;
+
+  if (button_flags & GI_BUTTON_R)
+    state |= GDK_BUTTON3_MASK;
+
+  if (button_flags & GI_BUTTON_WHEEL_UP)
+    state |= GDK_BUTTON4_MASK;
+
+  if (button_flags & GI_BUTTON_WHEEL_DOWN)
+    state |= GDK_BUTTON5_MASK;
+
+
+#if 1
+  if (key_flags & G_MODIFIERS_SHIFT)
+    ks |= GDK_SHIFT_MASK;
+
+  if (key_flags & G_MODIFIERS_META)
+    ks |= GDK_MOD1_MASK;
+
+  if (key_flags & G_MODIFIERS_CAPSLOCK)
+    ks |= GDK_LOCK_MASK;
+
+  if (key_flags & G_MODIFIERS_CTRL)
+    ks |= GDK_CONTROL_MASK;
+#endif
+  //printf("build_pointer_event_state state = %x %x\n", state,ks);
+  return state|ks;
+}
 
 
 /* 
@@ -1470,182 +1513,85 @@ gdk_keyval_from_name (const gchar *keyval_name)
     return GDK_VoidSymbol;
 }
 
-static void
-gdk_gix_convert_modifiers (long dfbmod,
-		long    dfblock)
-{
-	if (dfbmod & G_MODIFIERS_ALT)
-		_gdk_gix_modifiers |= GDK_MOD1_MASK;
-	else
-		_gdk_gix_modifiers &= ~GDK_MOD1_MASK;
-
-	if (dfbmod & G_MODIFIERS_ALT)
-		_gdk_gix_modifiers |= GDK_MOD2_MASK;
-	else
-		_gdk_gix_modifiers &= ~GDK_MOD2_MASK;
-
-	if (dfbmod & G_MODIFIERS_CTRL)
-		_gdk_gix_modifiers |= GDK_CONTROL_MASK;
-	else
-		_gdk_gix_modifiers &= ~GDK_CONTROL_MASK;
-
-	if (dfbmod & G_MODIFIERS_SHIFT)
-		_gdk_gix_modifiers |= GDK_SHIFT_MASK;
-	else
-		_gdk_gix_modifiers &= ~GDK_SHIFT_MASK;
-
-	if (dfblock & G_MODIFIERS_CAPSLOCK)
-		_gdk_gix_modifiers |= GDK_LOCK_MASK;
-	else
-		_gdk_gix_modifiers &= ~GDK_LOCK_MASK;
-}
-
 static guint
-gdk_gix_translate_key (unsigned key_id,
-		gi_keycode_t     key_symbol)
+gdk_gix_translate_key (gi_keycode_t     key_symbol)
 {
 	guint keyval = GDK_VoidSymbol;
 
 	/* special case numpad */
-	//if (key_id >= DIKI_KP_DIV && key_id <= DIKI_KP_9)
+
+	switch (key_symbol)
 	{
-		switch (key_symbol)
-		{
-			case G_KEY_SLASH:         keyval = GDK_KP_Divide;    break;
-			case G_KEY_ASTERISK:      keyval = GDK_KP_Multiply;  break;
-			case G_KEY_PLUS:     keyval = GDK_KP_Add;       break;
-			case G_KEY_MINUS:    keyval = GDK_KP_Subtract;  break;
-			case G_KEY_ENTER:         keyval = GDK_KP_Enter;     break;
-			case G_KEY_SPACE:         keyval = GDK_KP_Space;     break;
-			case G_KEY_TAB:           keyval = GDK_KP_Tab;       break;
-			case G_KEY_EQUALS:   keyval = GDK_KP_Equal;     break;
-			case G_KEY_COMMA:
-			case G_KEY_PERIOD:        keyval = GDK_KP_Decimal;   break;
-			case G_KEY_HOME:          keyval = GDK_KP_Home;      break;
-			case G_KEY_END:           keyval = GDK_KP_End;       break;
-			case G_KEY_PAGEUP:       keyval = GDK_KP_Page_Up;   break;
-			case G_KEY_PAGEDOWN:     keyval = GDK_KP_Page_Down; break;
-			case G_KEY_LEFT:   keyval = GDK_KP_Left;      break;
-			case G_KEY_RIGHT:  keyval = GDK_KP_Right;     break;
-			case G_KEY_UP:     keyval = GDK_KP_Up;        break;
-			case G_KEY_DOWN:   keyval = GDK_KP_Down;      break;
-			case G_KEY_FIRST:         keyval = GDK_KP_Begin;     break;
+		case G_KEY_SLASH:         keyval = GDK_KP_Divide;    break;
+		case G_KEY_ASTERISK:      keyval = GDK_KP_Multiply;  break;
+		case G_KEY_PLUS:     keyval = GDK_KP_Add;       break;
+		case G_KEY_MINUS:    keyval = GDK_KP_Subtract;  break;
+		case G_KEY_ENTER:         keyval = GDK_KP_Enter;     break;
+		//case G_KEY_SPACE:         keyval = GDK_KP_Space;     break;
+		case G_KEY_TAB:           keyval = GDK_Tab;       break;
+		case G_KEY_EQUALS:   keyval = GDK_KP_Equal;     break;
+		case G_KEY_COMMA:
+		case G_KEY_PERIOD:        keyval = GDK_KP_Decimal;   break;
+		//case G_KEY_HOME:          keyval = GDK_KP_Home;      break;
+		//case G_KEY_END:           keyval = GDK_KP_End;       break;
+		//case G_KEY_PAGEUP:       keyval = GDK_KP_Page_Up;   break;
+		//case G_KEY_PAGEDOWN:     keyval = GDK_KP_Page_Down; break;
+		case G_KEY_LEFT:   keyval = GDK_Left;      break;
+		case G_KEY_RIGHT:  keyval = GDK_Right;     break;
+		case G_KEY_UP:     keyval = GDK_Up;        break;
+		case G_KEY_DOWN:   keyval = GDK_Down;      break;
+		case G_KEY_FIRST:         keyval = GDK_KP_Begin;     break;
 
-			//case G_KEY_NULL:       keyval = GDK_VoidSymbol; break;
+		//case G_KEY_NULL:       keyval = GDK_VoidSymbol; break;
 
-			case G_KEY_BACKSPACE:  keyval = GDK_BackSpace;  break;
-			//case G_KEY_TAB:        keyval = GDK_Tab;        break;
-			//case G_KEY_RETURN:     keyval = GDK_Return;     break;
-			//case G_KEY_CANCEL:     keyval = GDK_Cancel;     break;
-			case G_KEY_ESCAPE:     keyval = GDK_Escape;     break;
-			//case G_KEY_SPACE:      keyval = GDK_space;      break;
-			case G_KEY_DELETE:     keyval = GDK_Delete;     break;
+		case G_KEY_BACKSPACE:  keyval = GDK_BackSpace;  break;
+		case G_KEY_RETURN:     keyval = GDK_Return;     break;
+		//case G_KEY_CANCEL:     keyval = GDK_Cancel;     break;
+		case G_KEY_ESCAPE:     keyval = GDK_Escape;     break;
+		case G_KEY_SPACE:      keyval = GDK_space;      break;
+		case G_KEY_DELETE:     keyval = GDK_Delete;     break;
 
-			case G_KEY_INSERT:        keyval = GDK_Insert;    break;
-			//case G_KEY_HOME:          keyval = GDK_Home;      break;
-			//case G_KEY_END:           keyval = GDK_End;       break;
-			//case G_KEY_PAGEUP:       keyval = GDK_Page_Up;   break;
-			//case G_KEY_PAGE_DOWN:     keyval = GDK_Page_Down; break;
-			case G_KEY_PRINT:         keyval = GDK_Print;     break;
-			case G_KEY_PAUSE:         keyval = GDK_Pause;     break;
-			//case G_KEY_SELECT:        keyval = GDK_Select;    break;
-			case G_KEY_CLEAR:         keyval = GDK_Clear;     break;
-			case G_KEY_MENU:          keyval = GDK_Menu;      break;
-			case G_KEY_HELP:          keyval = GDK_Help;      break;
-			//case G_KEY_NEXT:          keyval = GDK_Next;      break;
-			//case G_KEY_BEGIN:         keyval = GDK_Begin;     break;
-			case G_KEY_BREAK:         keyval = GDK_Break;     break;
+		case G_KEY_INSERT:        keyval = GDK_Insert;    break;
+		case G_KEY_HOME:          keyval = GDK_Home;      break;
+		case G_KEY_END:           keyval = GDK_End;       break;
+		case G_KEY_PAGEUP:       keyval = GDK_Page_Up;   break;
+		case G_KEY_PAGEDOWN:     keyval = GDK_Page_Down; break;
+		case G_KEY_PRINT:         keyval = GDK_Print;     break;
+		case G_KEY_PAUSE:         keyval = GDK_Pause;     break;
+		//case G_KEY_SELECT:        keyval = GDK_Select;    break;
+		case G_KEY_CLEAR:         keyval = GDK_Clear;     break;
+		case G_KEY_MENU:          keyval = GDK_Menu;      break;
+		case G_KEY_HELP:          keyval = GDK_Help;      break;
+		//case G_KEY_NEXT:          keyval = GDK_Next;      break;
+		//case G_KEY_BEGIN:         keyval = GDK_Begin;     break;
+		case G_KEY_BREAK:         keyval = GDK_Break;     break;
 
-			case G_MODIFIERS_LSHIFT:    keyval = GDK_Shift_L;     break;
-			case G_MODIFIERS_RSHIFT:    keyval = GDK_Shift_R;     break;
-			case G_MODIFIERS_LCTRL:  keyval = GDK_Control_L;   break;
-			//case G_MODIFIERS_RCTRL:  keyval = GDK_Control_R;   break;
-			case G_MODIFIERS_LALT:      keyval = GDK_Alt_L;       break;
-			//case G_MODIFIERS_RALT:      keyval = GDK_Alt_R;       break;
-			case G_MODIFIERS_LMETA:     keyval = GDK_Meta_L;      break;
-			case G_MODIFIERS_RMETA:     keyval = GDK_Meta_R;      break;
-			//case G_MODIFIERS_SUPER_L:    keyval = GDK_Super_L;     break;
-			//case G_MODIFIERS_SUPER_R:    keyval = GDK_Super_R;     break;
-			//case G_MODIFIERS_HYPER_L:    keyval = GDK_Hyper_L;     break;
-			//case G_MODIFIERS_HYPER_R:    keyval = GDK_Hyper_R;     break;
+		case G_MODIFIERS_LSHIFT:    keyval = GDK_Shift_L;     break;
+		case G_MODIFIERS_RSHIFT:    keyval = GDK_Shift_R;     break;
+		case G_MODIFIERS_LCTRL:  keyval = GDK_Control_L;   break;
+		//case G_MODIFIERS_RCTRL:  keyval = GDK_Control_R;   break;
+		case G_MODIFIERS_LALT:      keyval = GDK_Alt_L;       break;
+		//case G_MODIFIERS_RALT:      keyval = GDK_Alt_R;       break;
+		case G_MODIFIERS_LMETA:     keyval = GDK_Meta_L;      break;
+		case G_MODIFIERS_RMETA:     keyval = GDK_Meta_R;      break;
+		//case G_MODIFIERS_SUPER_L:    keyval = GDK_Super_L;     break;
+		//case G_MODIFIERS_SUPER_R:    keyval = GDK_Super_R;     break;
+		//case G_MODIFIERS_HYPER_L:    keyval = GDK_Hyper_L;     break;
+		//case G_MODIFIERS_HYPER_R:    keyval = GDK_Hyper_R;     break;
 
-			case G_KEY_0 ... G_KEY_9:
-						 keyval = GDK_KP_0 + key_symbol - G_KEY_0;
-						 break;
-			case G_KEY_F1 ... G_KEY_F4:
-						 keyval = GDK_KP_F1 + key_symbol - G_KEY_F1;
-						 break;
+		case G_KEY_0 ... G_KEY_9:
+					 keyval = GDK_KP_0 + key_symbol - G_KEY_0;
+					 break;
+		case G_KEY_F1 ... G_KEY_F4:
+					 keyval = GDK_KP_F1 + key_symbol - G_KEY_F1;
+					 break;
 
-			default:
-				keyval = gdk_unicode_to_keyval (key_symbol);
-							      if (keyval & 0x01000000)
-								      keyval = GDK_VoidSymbol;
-						 break;
-		}
+		default:
+			keyval = gdk_unicode_to_keyval (key_symbol);
+							  if (keyval & 0x01000000)
+								  keyval = GDK_VoidSymbol;
+					 break;
 	}
-
-#if 0
-	else
-	{
-		//switch (DFB_KEY_TYPE (key_symbol))
-		{
-			//case DIKT_UNICODE:
-				switch (key_symbol)
-				{
-					
-
-					default:
-							      keyval = gdk_unicode_to_keyval (key_symbol);
-							      if (keyval & 0x01000000)
-								      keyval = GDK_VoidSymbol;
-				}
-				//break;
-
-			//case DIKT_SPECIAL:
-				switch (key_symbol)
-				{
-					
-					default:
-								 break;
-				}
-				//break;
-
-			/*case DIKT_FUNCTION:
-				keyval = GDK_F1 + key_symbol - G_KEY_F1;
-				if (keyval > GDK_F35)
-					keyval = GDK_VoidSymbol;
-				break;
-				*/
-
-			//case DIKT_MODIFIER:
-				switch (key_id)
-				{
-					
-					default:
-							      break;
-				}
-				//break;
-
-			//case DIKT_LOCK:
-				switch (key_symbol)
-				{
-					case G_KEY_CAPS_LOCK:    keyval = GDK_Caps_Lock;   break;
-					case G_KEY_NUM_LOCK:     keyval = GDK_Num_Lock;    break;
-					case G_KEY_SCROLL_LOCK:  keyval = GDK_Scroll_Lock; break;
-					default:
-								break;
-				}
-				//break;
-
-			//case DIKT_DEAD:
-				/* dead keys are handled directly by gix */
-			//	break;
-
-			//case DIKT_CUSTOM:
-			//	break;
-		}
-	}
-#endif
 
 	return keyval;
 }
@@ -1653,45 +1599,34 @@ gdk_gix_translate_key (unsigned key_id,
 	void
 _gdk_gix_keyboard_init (void)
 {
-	//DFBInputDeviceDescription desc;
-	gint i, n, length;
-	//IGixInputDevice   *keyboard=_gdk_display->keyboard;
+	gint i,n,  length;
 
-	//if (!keyboard)
-	//	return;
     if( gix_keymap )    
             return;
 
-	//keyboard->GetDescription (keyboard, &desc);
-	_gdk_display->keymap=g_object_new (gdk_keymap_get_type (), NULL);
-
-	//if (G_KEY_FIRST < 0 || desc.max_keycode < G_KEY_FIRST)
-	//	return;
+	_gdk_display->keymap = g_object_new (gdk_keymap_get_type (), NULL);
 
 	gix_min_keycode = G_KEY_FIRST;
 	gix_max_keycode = G_KEY_LAST;
 
 	length = gix_max_keycode - G_KEY_FIRST + 1;
 
-
 	gix_keymap = g_new0 (guint, 4 * length);
 	//FIXME DPP
 
 	for (i = 0; i < length; i++)
 	{
-		//DFBInputDeviceKeymapEntry  entry;
-
 		//if (keyboard->GetKeymapEntry (keyboard,
-		//			i + G_KEY_FIRST, &entry) != 0)
+		//			i + desc.min_keycode, &entry) != DFB_OK)
 		//	continue;
-		//for (n = 0; n < 4; n++) {
-		//	gix_keymap[i * 4 + n] = 
-		//		gdk_gix_translate_key (entry.identifier, entry.symbols[n]);
-		//}
+		for (n = 0; n < 4; n++) {
+			gix_keymap[i * 4 + n] = gdk_gix_translate_key(gix_min_keycode + i);
+		}
+		
 	}
 }
 
-	void
+void
 _gdk_gix_keyboard_exit (void)
 {
 	if (!gix_keymap)
@@ -1703,52 +1638,192 @@ _gdk_gix_keyboard_exit (void)
 	gix_keymap = NULL;
 }
 
+
+static void
+build_key_event_state (GdkEventKey *event,
+		       gi_msg_t      *msg)
+{
+  unsigned mk = msg->body.message[3];
+  event->state = 0;
+
+  if (G_MODIFIERS_SHIFT & mk)
+    event->state |= GDK_SHIFT_MASK;
+
+  if (G_MODIFIERS_CAPSLOCK & 0x01)
+    event->state |= GDK_LOCK_MASK;
+
+  if (GI_BUTTON_L & mk)
+    event->state |= GDK_BUTTON1_MASK;
+  if (GI_BUTTON_M & mk)
+    event->state |= GDK_BUTTON2_MASK;
+  if (GI_BUTTON_R & mk)
+    event->state |= GDK_BUTTON3_MASK;
+  if (GI_BUTTON_WHEEL_UP & mk)
+    event->state |= GDK_BUTTON4_MASK;
+  if (GI_BUTTON_WHEEL_DOWN & mk)
+    event->state |= GDK_BUTTON5_MASK;
+
+  /*if (_gdk_keyboard_has_altgr &&
+      (key_state[VK_LCONTROL] & mk) &&
+      (key_state[VK_RMENU] & mk))
+    {
+      event->group = 1;
+      event->state |= GDK_MOD2_MASK;
+      if (key_state[VK_RCONTROL] & mk)
+	event->state |= GDK_CONTROL_MASK;
+      if (key_state[VK_LMENU] & mk)
+	event->state |= GDK_MOD1_MASK;
+    }
+  else*/
+    {
+      event->group = 0;
+      if (G_MODIFIERS_CTRL & mk)
+	event->state |= GDK_CONTROL_MASK;
+      if (G_MODIFIERS_META & mk)
+	event->state |= GDK_MOD1_MASK;
+    }
+}
+
+
+static void
+build_wm_ime_composition_event (GdkEventKey *event,
+				gi_msg_t      *msg,
+				unsigned   wc)
+{
+  event->time =  (msg->time);
+  
+  build_key_event_state (event, msg);
+
+  event->hardware_keycode = 0; /* FIXME: What should it be? */
+  event->string = NULL;
+  event->length = 0;
+  event->keyval = gdk_unicode_to_keyval (wc);
+  //fill_key_event_string (event); 
+}
+
+
+static void
+fill_key_event_string (GdkEventKey *event)
+{
+  gunichar c;
+  gchar buf[256];
+
+  /* Fill in event->string crudely, since various programs
+   * depend on it.
+   */
+  
+  c = 0;
+  if (event->keyval != GDK_VoidSymbol)
+    c = gdk_keyval_to_unicode (event->keyval);
+
+  if (c)
+    {
+      gsize bytes_written;
+      gint len;
+      
+      /* Apply the control key - Taken from Xlib
+       */
+      if (event->state & GDK_CONTROL_MASK)
+	{
+	  if ((c >= '@' && c < '\177') || c == ' ')
+	    c &= 0x1F;
+	  else if (c == '2')
+	    {
+	      event->string = g_memdup ("\0\0", 2);
+	      event->length = 1;
+	      return;
+	    }
+	  else if (c >= '3' && c <= '7')
+	    c -= ('3' - '\033');
+	  else if (c == '8')
+	    c = '\177';
+	  else if (c == '/')
+	    c = '_' & 0x1F;
+	}
+      
+      len = g_unichar_to_utf8 (c, buf);
+      buf[len] = '\0';
+	  
+      event->string = g_locale_from_utf8 (buf, len,
+					      NULL, &bytes_written,
+					      NULL);
+      if (event->string)
+	event->length = bytes_written;
+    }
+  else if (event->keyval == GDK_Escape)
+    {
+      event->length = 1;
+      event->string = g_strdup ("\033");
+    }
+  else if (event->keyval == GDK_Return ||
+	   event->keyval == GDK_KP_Enter)
+    {
+      event->length = 1;
+      event->string = g_strdup ("\r");
+    }
+  
+  if (!event->string)
+    {
+      event->length = 0;
+      event->string = g_strdup ("");
+    }
+}
+
+
 //FIXME DPP
 void
-gdk_gix_translate_key_event (gi_msg_t *dfb_event,
+gdk_gix_translate_key_event (gi_msg_t *gix_event,
                                   GdkEventKey    *event)
 {
-	gint  len;
-	gchar buf[6];
-	unsigned modifiers, key_id, key_symbol,keyval, key_code,locks=0;
+	//gint  len;
+	unsigned modifiers,   key_code;
 
-	g_return_if_fail (dfb_event != NULL);
+	g_return_if_fail (gix_event != NULL);
 	g_return_if_fail (event != NULL);
 
-	modifiers=dfb_event->body.message[1];
-	key_id=dfb_event->params[3];
-	key_code=dfb_event->params[3];
-	keyval=dfb_event->params[3];
-	key_symbol=dfb_event->params[3];
 
-	gdk_gix_convert_modifiers (modifiers, locks);
+  if (gix_event->attribute_1 && gix_event->params[3] > 127)
+  {
+	/* Build a key press event */
+	//event = gdk_event_new (msg->type == GI_MSG_KEY_DOWN ? 
+      //GDK_KEY_PRESS : GDK_KEY_RELEASE);
 
-	event->state            = _gdk_gix_modifiers;
+	//event->window = window;
+	//gdk_event_set_device (event, GDK_DEVICE_MANAGER_WIN32 (device_manager)->core_keyboard);
+	build_wm_ime_composition_event (event, gix_event, gix_event->params[3]);
+	g_print("gET composition KEY %d\n", event->keyval);
+	return ;
+  }
+
+
+	modifiers = gix_event->body.message[1];
+	key_code = gix_event->params[3];
+	
+	build_key_event_state (event, gix_event);
 	event->group            = (modifiers & G_MODIFIERS_ALT) ? 1 : 0;
 	event->hardware_keycode = key_code;
-	event->keyval           = gdk_gix_translate_key (key_id,
-			key_symbol);
+	event->keyval           = 0;//gdk_gix_translate_key (key_code);
+	event->length = 0;
+	event->string = 0;
+
+	gdk_keymap_translate_keyboard_state (NULL,
+					   event->hardware_keycode,
+					   event->state,
+					   event->group,
+					   &event->keyval,
+					   NULL, NULL, NULL);
+
+	
+
 	/* If the device driver didn't send a key_code (happens with remote
 	   controls), we try to find a suitable key_code by looking at the
 	   default keymap. */
-	if (key_code == -1 && gix_keymap)
-	{
-		gint i;
+	
+	fill_key_event_string (event);
+	g_print("gET KEY %d,%d len=%d\n", 
+		event->keyval, gdk_gix_translate_key (key_code),event->length);
 
-		for (i = gix_min_keycode; i <= gix_max_keycode; i++)
-		{
-			if (gix_keymap[(i - gix_min_keycode) * 4] == keyval)
-			{
-				event->hardware_keycode = i;
-				break;
-			}
-		}
-	} 
 
-	len = g_unichar_to_utf8 (key_symbol, buf);
-
-	event->string = g_strndup (buf, len);
-	event->length = len;
 }
 
 /**
@@ -1764,18 +1839,7 @@ gdk_gix_translate_key_event (gi_msg_t *dfb_event,
 gboolean
 gdk_keymap_get_caps_lock_state (GdkKeymap *keymap)
 {
-  //IGixInputDevice *keyboard = _gdk_display->keyboard;
-
-  //if (keyboard)
-    {
-      long  state=0;
-
-	  //FIXME DPP
-
-      //if (keyboard->GetLockState (keyboard, &state) == 0)
-       // return ((state & G_MODIFIERS_CAPSLOCK) != 0);
-    }
-
+  /* FIXME: Implement this. */
   return FALSE;
 }
 
@@ -1986,13 +2050,14 @@ gdk_keymap_translate_keyboard_state (GdkKeymap       *keymap,
 gdk_keymap_get_for_display (GdkDisplay *display)
 {
 	if( display == NULL ) return NULL;
-	g_assert(GDK_IS_DISPLAY_DFB(display));
-	GdkDisplayDFB *gdisplay = GDK_DISPLAY_DFB(display);
+
+	g_assert(GDK_IS_DISPLAY_GIX(display));
+	GdkDisplayGIX *gdisplay = GDK_DISPLAY_GIX(display);
 	g_assert( gdisplay->keymap != NULL);
 	return gdisplay->keymap;
 }
 
-	PangoDirection
+PangoDirection
 gdk_keymap_get_direction (GdkKeymap *keymap)
 {
 	return PANGO_DIRECTION_NEUTRAL;
@@ -2015,11 +2080,11 @@ guint
 gdk_keymap_lookup_key (GdkKeymap          *keymap,
 		const GdkKeymapKey *key)
 {
+  /* FIXME: Implement */
 	g_warning("gdk_keymap_lookup_key unimplemented \n");	
 	return 0;
 }
 
 
-//#define __GDK_KEYS_GIX_C__
 #define __GDK_KEYS_DIRECTFB_C__
 #include "gdkaliasdef.c"

@@ -23,12 +23,12 @@
  * file for a list of people on the GTK+ Team.
  */
 
+
 /*
  * GTK+ Gix backend
- * Copyright (C) 2001-2002  convergence integrated media GmbH
- * Copyright (C) 2002-2004  convergence GmbH
- * Written by Denis Oliver Kropp <dok@convergence.de> and
- *            Sven Neumann <sven@convergence.de>
+ * Copyright (C) 2011 www.hanxuantech.com.
+ * Written by Easion <easion@hanxuantech.com> , it's based
+ * on DirectFB port.
  */
 
 #include "config.h"
@@ -45,14 +45,13 @@
 #include "gdkpixmap.h"
 #include "gdkalias.h"
 
+uint8_t *bitmap_create_from_data (const uint8_t *data, int width, int height,gi_bool_t x11_comp, int *pitch);
 
 static void gdk_pixmap_impl_gix_init       (GdkPixmapImplGix      *pixmap);
 static void gdk_pixmap_impl_gix_class_init (GdkPixmapImplGixClass *klass);
 static void gdk_pixmap_impl_gix_finalize   (GObject                    *object);
 
-
 static gpointer parent_class = NULL;
-
 
 GType
 gdk_pixmap_impl_gix_get_type (void)
@@ -119,8 +118,7 @@ gdk_pixmap_new (GdkDrawable *drawable,
                 gint       height,
                 gint       depth)
 {
-  DFBSurfacePixelFormat    format;
-  //gi_image_t        *surface;
+  GIXSurfacePixelFormat    format;
   GdkPixmap               *pixmap;
   GdkDrawableImplGix *draw_impl;
 
@@ -145,10 +143,7 @@ gdk_pixmap_new (GdkDrawable *drawable,
       g_return_val_if_fail (draw_impl != NULL, NULL);
 
 	  format = gi_screen_format();
-	  depth = GI_RENDER_FORMAT_BPP (format);
-
-      //draw_impl->surface->GetPixelFormat (draw_impl->surface, &format);
-      //depth = DFB_BITS_PER_PIXEL (format);
+	  depth = GI_RENDER_FORMAT_BPP (format);      
     }
   else
     {
@@ -178,16 +173,11 @@ gdk_pixmap_new (GdkDrawable *drawable,
         }
     }
 
-  //if( !(surface = 
-	//gdk_display_dfb_create_surface(_gdk_display,format,width,height) )) { 
-    //g_assert( surface != NULL);
-    //return NULL;
-  //}
-
+ 
   pixmap = g_object_new (gdk_pixmap_get_type (), NULL);
   draw_impl = GDK_DRAWABLE_IMPL_GIX (GDK_PIXMAP_OBJECT (pixmap)->impl);
-  //draw_impl->surface = surface;
-  draw_impl->window_id = gi_create_pixmap_window(GDK_DRAWABLE_IMPL_GIX (drawable)->window_id,width,height,format);
+  draw_impl->window_id = gi_create_pixmap_window(
+	  GDK_DRAWABLE_IMPL_GIX (drawable)->window_id,width,height,format);
 
   //surface->Clear (surface, 0x0, 0x0, 0x0, 0x0);
   //surface->GetSize (surface, &draw_impl->width, &draw_impl->height);
@@ -196,15 +186,11 @@ gdk_pixmap_new (GdkDrawable *drawable,
   draw_impl->width = width;
   draw_impl->height = height;
   draw_impl->format = format;
-
   draw_impl->abs_x = draw_impl->abs_y = 0;
-
   GDK_PIXMAP_OBJECT (pixmap)->depth = depth;
-
   return pixmap;
 }
 
-uint8_t *bitmap_create_from_data (const uint8_t *data, int width, int height,gi_bool_t x11_comp, int *pitch);
 
 GdkPixmap *
 gdk_bitmap_create_from_data (GdkDrawable   *drawable,
@@ -231,11 +217,11 @@ gdk_bitmap_create_from_data (GdkDrawable   *drawable,
     {
       guchar *dst;
       gint    pitch;
-	  gi_image_t* surface;
+
 	  gc = gi_create_gc(GDK_DRAWABLE_IMPL_GIX (GDK_PIXMAP_OBJECT (pixmap)->impl)->window_id,NULL);
 
 #if 1
-	  dst = bitmap_create_from_data(data, width,height,TRUE, &pitch);
+	  dst = bitmap_create_from_data((const uint8_t *)data, width,height,TRUE, &pitch);
 	  if(dst){
 		gi_image_t img;
 		img.rgba = (gi_color_t*)dst;
@@ -311,11 +297,9 @@ gdk_pixmap_create_from_data (GdkDrawable   *drawable,
       wid = GDK_DRAWABLE_IMPL_GIX (GDK_PIXMAP_OBJECT (pixmap)->impl)->window_id;
 
 	   surface=gi_create_image_depth(width,height,format);
-	   dst = surface->rgba;
+	   dst = (gchar*)surface->rgba;
 	   pitch = surface->pitch;
 
-      //if (surface->Lock( surface,
-       //                  DSLF_WRITE, (void**)(&dst), &pitch ) == 0)
         {
           gint i;
 
@@ -331,7 +315,6 @@ gdk_pixmap_create_from_data (GdkDrawable   *drawable,
 		gi_destroy_gc(gc);
 		gi_destroy_image(surface);
 
-          //surface->Unlock( surface );
         }
     }
 

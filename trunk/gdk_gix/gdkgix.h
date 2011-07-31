@@ -24,12 +24,10 @@
 
 /*
  * GTK+ Gix backend
- * Copyright (C) 2001-2002  convergence integrated media GmbH
- * Copyright (C) 2002       convergence GmbH
- * Written by Denis Oliver Kropp <dok@convergence.de> and
- *            Sven Neumann <sven@convergence.de>
+ * Copyright (C) 2011 www.hanxuantech.com.
+ * Written by Easion <easion@hanxuantech.com> , it's based
+ * on DirectFB port.
  */
-
 #ifndef __GDK_GIX_H__
 #define __GDK_GIX_H__
 
@@ -42,11 +40,11 @@
 #include <gi/property.h>
 #include "gdk/gdkprivate.h"
 
-typedef unsigned DFBSurfacePixelFormat;
+typedef unsigned GIXSurfacePixelFormat;
 typedef struct 
 {
 	int r,g,b,a;
-}DFBColor;
+}GIXColor;
 
 extern GdkWindow * _gdk_parent_root;
 
@@ -54,7 +52,7 @@ G_BEGIN_DECLS
 
 #define GDK_ROOT_WINDOW()      _gdk_parent_root 
 
-//#define GDK_WINDOW_DFB_ID(win) (GDK_WINDOW_IMPL_GIX (GDK_WINDOW_OBJECT (win)->impl)->drawable.window_id)
+//#define GDK_WINDOW_GIX_ID(win) (GDK_WINDOW_IMPL_GIX (GDK_WINDOW_OBJECT (win)->impl)->drawable.window_id)
 
 
 /* used for the --transparent-unfocused hack */
@@ -62,8 +60,8 @@ extern gboolean            gdk_gix_apply_focus_opacity;
 
 /* used for the --enable-color-keying hack */
 extern gboolean            gdk_gix_enable_color_keying;
-extern DFBColor            gdk_gix_bg_color;
-extern DFBColor            gdk_gix_bg_color_key;
+extern GIXColor            gdk_gix_bg_color;
+extern GIXColor            gdk_gix_bg_color_key;
 
 /* to disable antialiasing */
 extern gboolean            gdk_gix_monochrome_fonts;
@@ -78,21 +76,20 @@ GdkWindow * gdk_gix_window_new         (GdkWindow             *parent,
                                              GdkWindowAttr         *attributes,
                                              gint                   attributes_mask);
 
-GdkVisual * gdk_gix_visual_by_format   (DFBSurfacePixelFormat  pixel_format);
+GdkVisual * gdk_gix_visual_by_format   (GIXSurfacePixelFormat  pixel_format);
 
-//IGixWindow *gdk_gix_window_lookup(GdkWindow *window);
-//IGixSurface *gdk_gix_surface_lookup(GdkWindow *window);
+gi_window_id_t gdk_gix_window_lookup(GdkWindow *window );
 
 GdkWindow *gdk_gix_create_child_window(GdkWindow *parent);
 
 
 #define D_UNIMPLEMENTED do{\
-		printf("%s: %s got line%d UNIMPLEMENTED !!!\n",__FILE__,__FUNCTION__,__LINE__);\
+		g_print("%s: %s line %d UNIMPLEMENTED !!!\n",__FILE__,__FUNCTION__,__LINE__);\
 	}\
 	while (0)
 
 
-#define GixError printf
+#define GixError g_print
 G_END_DECLS
 
 #endif /* __GDK_GIX_H__ */

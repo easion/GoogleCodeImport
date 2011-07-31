@@ -17,19 +17,13 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/*
- * Modified by the GTK+ Team and others 1997-2000.  See the AUTHORS
- * file for a list of people on the GTK+ Team.
- */
 
 /*
  * GTK+ Gix backend
- * Copyright (C) 2001-2002  convergence integrated media GmbH
- * Copyright (C) 2002-2004  convergence GmbH
- * Written by Denis Oliver Kropp <dok@convergence.de> and
- *            Sven Neumann <sven@convergence.de>
+ * Copyright (C) 2011 www.hanxuantech.com.
+ * Written by Easion <easion@hanxuantech.com> , it's based
+ * on DirectFB port.
  */
-
 #include "config.h"
 
 #include "gdkgix.h"
@@ -113,45 +107,17 @@ gdk_visual_get_type (void)
 void
 _gdk_visual_init ()
 {
-  gi_screen_info_t  dlc;
-  //DFBSurfaceDescription  desc;
-  //IGixSurface      *dest;
-  gint                   i, c;
+  gi_screen_info_t  dlc; 
+  gint				i;
 
-
+  //FIXME
   gi_get_screen_info ( &dlc);
   g_assert( dlc.format != 0);
 
-  //dest = gdk_display_dfb_create_surface(_gdk_display,dlc.pixelformat,8,8);
-  //g_assert (dest != NULL);
-
-  /* We could provide all visuals since Gix allows us to mix
-     surface formats. Blitting with format conversion can however
-     be incredibly slow, so we've choosen to register only those
-     visuals that can be blitted to the display layer in hardware.
-
-     If you want to use a special pixelformat that is not registered
-     here, you can create it using the Gix-specific function
-     gdk_gix_visual_by_format().
-     Note:
-     changed to do all formats but we should redo this code
-     to ensure the base format ARGB LUT8 RGB etc then add ones supported
-     by the hardware
-   */
+  
   for (i = 0; i < G_N_ELEMENTS (formats); i++)
     {
-      /*IGixSurface    *src;
-      DFBAccelerationMask  acc;
-
-      desc.flags = DSDESC_WIDTH | DSDESC_HEIGHT | DSDESC_PIXELFORMAT;
-      desc.width       = 8;
-      desc.height      = 8;
-      desc.pixelformat = formats[i];
-      if (_gdk_display->gix->CreateSurface (_gdk_display->gix,
-	 &desc, &src) != 0) 
-        continue;
-		*/
-
+     
       visuals[i] = gdk_gix_visual_create (formats[i]);
 
       //dest->GetAccelerationMask (dest, src, &acc);
@@ -161,16 +127,13 @@ _gdk_visual_init ()
 			system_visual = GDK_VISUAL (visuals[i]);
         }
 
-      //src->Release (src);
     }
-
-  //dest->Release (dest);
 
   //fallback to ARGB must be supported
   if (!system_visual)
     {
-       g_assert (visuals[GI_RENDER_a8r8g8b8] != NULL);
-       system_visual = GDK_VISUAL(visuals[GI_RENDER_a8r8g8b8]);
+       g_assert (visuals[0] != NULL);
+       system_visual = GDK_VISUAL(visuals[0]);
     }
 
   g_assert (system_visual != NULL);
@@ -326,7 +289,7 @@ gdk_gix_visual_by_format (gi_format_code_t pixel_format)
 #if 0 //FIXME DPP
   /* none matched, try to create a new one for this pixel_format */
   {
-    DFBSurfaceDescription  desc;
+    GIXSurfaceDescription  desc;
     IGixSurface      *test;
 
     desc.flags = DSDESC_WIDTH | DSDESC_HEIGHT | DSDESC_PIXELFORMAT;

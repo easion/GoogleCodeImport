@@ -24,10 +24,9 @@
 
 /*
  * GTK+ Gix backend
- * Copyright (C) 2001-2002  convergence integrated media GmbH
- * Copyright (C) 2002-2004  convergence GmbH
- * Written by Denis Oliver Kropp <dok@convergence.de> and
- *            Sven Neumann <sven@convergence.de>
+ * Copyright (C) 2011 www.hanxuantech.com.
+ * Written by Easion <easion@hanxuantech.com> , it's based
+ * on DirectFB port.
  */
 
 #include "config.h"
@@ -39,13 +38,13 @@
 #include "gdkalias.h"
 
 
-GdkDisplayDFB *_gdk_display = NULL;
+GdkDisplayGIX *_gdk_display = NULL;
 GdkScreen          * _gdk_screen                              = NULL;
 
 gboolean              gdk_gix_apply_focus_opacity        = FALSE;
 gboolean              gdk_gix_enable_color_keying        = FALSE;
-DFBColor              gdk_gix_bg_color                   = { 0, 0, 0, 0 };
-DFBColor              gdk_gix_bg_color_key               = { 0, 0, 0, 0 };
+GIXColor              gdk_gix_bg_color                   = { 0, 0, 0, 0 };
+GIXColor              gdk_gix_bg_color_key               = { 0, 0, 0, 0 };
 gboolean              gdk_gix_monochrome_fonts           = FALSE;
 
 GdkWindow          * _gdk_gix_pointer_grab_window        = NULL;

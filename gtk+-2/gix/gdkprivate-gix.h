@@ -480,4 +480,14 @@ gint build_pointer_event_state (unsigned button_flags, unsigned key_flags);
 void _gdk_window_process_expose (GdkWindow    *window,
 			    gulong        serial,
 			    GdkRectangle *area);
+gi_atom_id_t
+gdk_x11_atom_to_xatom_for_display (GdkDisplay *display, 
+				   GdkAtom atom);
+
+gi_atom_id_t
+gdk_x11_get_xatom_by_name_for_display (GdkDisplay  *display,
+				       const gchar *atom_name);
+
+
+
 #endif /* __GDK_PRIVATE_GIX_H__ */

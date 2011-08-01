@@ -1646,6 +1646,8 @@ build_key_event_state (GdkEventKey *event,
   unsigned mk = msg->body.message[3];
   event->state = 0;
 
+  return; //fixme
+
   if (G_MODIFIERS_SHIFT & mk)
     event->state |= GDK_SHIFT_MASK;
 

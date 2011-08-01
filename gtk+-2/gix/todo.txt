@@ -1,7 +1,10 @@
-1.gix module鼠标(gtk)
+1.gix module鼠标备份BUFFER(gtk)
 2.keyboard输出
 3.显示(剪切域问题)
 4.big button(客户端最大窗口限制）
 5.dnd
 6.稳定性
 7.cairo theme
+8.gc复制(GTK GC COPY)
+9.调色板
+10.键盘布局

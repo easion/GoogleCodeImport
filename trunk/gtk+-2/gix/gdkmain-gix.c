@@ -315,6 +315,7 @@ gdk_gix_event_make (GdkWindow    *window,
     case GDK_KEY_PRESS:
     case GDK_KEY_RELEASE:
       event->key.time = the_time;
+	event->key.window = window;
       break;
     case GDK_ENTER_NOTIFY:
     case GDK_LEAVE_NOTIFY:

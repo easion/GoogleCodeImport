@@ -344,24 +344,7 @@ static int atom_bits = 32;
 static void fd_callback(int,void *) {
   do_queued_events();
 }
-/*
-extern "C" {
-  static int io_error_handler() {
-    Fl::fatal("X I/O error");
-    return 0;
-  }
 
-  static int xerror_handler( XErrorEvent* e) {
-    char buf1[128], buf2[128];
-    sprintf(buf1, "XRequest.%d", e->request_code);
-    XGetErrorDatabaseText(d,"",buf1,buf1,buf2,128);
-    XGetErrorText(d, e->error_code, buf1, 128);
-    Fl::warning("%s: %s 0x%lx", buf2, buf1, e->resourceid);
-	
-    return 0;
-  }
-}
-*/
 extern char *fl_get_font_xfld(int fnum, int size);
 
 void fl_new_ic()
@@ -392,70 +375,18 @@ void fl_set_status(int x, int y, int w, int h)
 }
 
 void fl_init_xim() {
-  /*static int xim_warning = 2;
-  if (xim_warning > 0) xim_warning--;
-
-  //XIMStyle *style;
-  XIMStyles *xim_styles;
-  if (!fl_display) return;
-  if (fl_xim_im) return;
-
-  fl_xim_im = XOpenIM(fl_display, NULL, NULL, NULL);
-  xim_styles = NULL;
-  fl_xim_ic = NULL;
-
-  if (fl_xim_im) {
-    XGetIMValues (fl_xim_im, XNQueryInputStyle,
-                  &xim_styles, NULL, NULL);
-  } else {
-    if (xim_warning)
-      Fl::warning("XOpenIM() failed");
-    // if xim_styles is allocated, free it now
-    if (xim_styles) free(xim_styles);
-    return;
-  }
-
-  if (xim_styles && xim_styles->count_styles) {
-    fl_new_ic();
-   } else {
-     if (xim_warning)
-       Fl::warning("No XIM style found");
-     XCloseIM(fl_xim_im);
-     fl_xim_im = NULL;
-     // if xim_styles is allocated, free it now
-     if (xim_styles) free(xim_styles);
-     return;
-  }
-  if (!fl_xim_ic) {
-    if (xim_warning)
-      Fl::warning("XCreateIC() failed");
-    XCloseIM(fl_xim_im);
-    fl_xim_im = NULL;
-  }
-  // if xim_styles is still allocated, free it now
-  if(xim_styles) free(xim_styles);
-  */
+ 
 }
 
 void fl_open_display(void) {
   if (fl_display) return;
 
   setlocale(LC_CTYPE, "");
-  //XSetLocaleModifiers("");
-
-  //XSetIOErrorHandler(io_error_handler);
-  //XSetErrorHandler(xerror_handler);
-
+ 
   int d = gi_init();
   if (d<0) Fl::fatal("Can't open display");
 
-  /*char *v = getenv("FLTK_THEME");
-
-  if (v)
-  {
-    Fl::scheme(v);
-  }*/
-
+ 
   fl_open_display(1);
 }
 
@@ -501,8 +432,6 @@ void fl_open_display(int d) {
 
 // construct an gi_screen_info_t that matches the default Visual:
   //gi_screen_info_t templt; int num;
-  //templt.visualid = XVisualIDFromVisual(DefaultVisual(d, fl_screen));
-  //fl_visual = XGetVisualInfo(d, VisualIDMask, &templt, &num);
   fl_visual = (gi_screen_info_t *)malloc(sizeof(gi_screen_info_t));
   gi_get_screen_info(fl_visual);
   //fl_colormap = DefaultColormap(d, fl_screen);
@@ -1177,25 +1106,10 @@ int fl_handle(const gi_msg_t& thisevent)
 	keysym = keycode;
     if (xevent.type == GI_MSG_KEY_DOWN) { //down
       int len = 0;
-      event = FL_KEYDOWN;
-
-      /*if (fl_xim_ic) {
-	int status;
-	len = XUtf8LookupString( (XKeyPressedEvent *)&xevent.xkey,
-			     buffer, buffer_len, &keysym, &status);
-
-	while (status == XBufferOverflow && buffer_len < 50000) {
-	  buffer_len = buffer_len * 5 + 1;
-	  buffer = (char*)realloc(buffer, buffer_len);
-	  len = XUtf8LookupString( (XKeyPressedEvent *)&xevent.xkey,
-			     buffer, buffer_len, &keysym, &status);
-	}
-	keysym = XKeycodeToKeysym(fl_display, keycode, 0);
-      } else*/ 
+      event = FL_KEYBOARD;//FL_KEYDOWN;
+     
 		if (xevent.attribute_1 && xevent.params[3] > 127)
-		{
-		 // unsigned char utf8_buffer[10];
-		//int count;
+		{		
 
 		memset(buffer,0,buffer_len);
 		//len = utf8_wctomb(buffer, event->params[3], buffer_len);
@@ -1205,21 +1119,7 @@ int fl_handle(const gi_msg_t& thisevent)
 		 {
 			Fl::e_keysym = Fl::e_original_keysym = ms2fltk(keycode,1);
 			buffer[0] = keycode;
-			len = 1;
-
-        //static XComposeStatus compose;
-        /*len = XLookupString((XKeyEvent*)&(xevent.xkey),
-                             buffer, buffer_len, &keysym, 0); //&compose/
-        if (keysym && keysym < 0x400) { // a character in latin-1,2,3,4 sets
-          // force it to type a character (not sure if this ever is needed):
-          // if (!len) {buffer[0] = char(keysym); len = 1;}
-          len = fl_utf8encode(XKeysymToUcs(keysym), buffer);
-          if (len < 1) len = 1;
-          // ignore all effects of shift on the keysyms, which makes it a lot
-          // easier to program shortcuts and is Windoze-compatible:
-          keysym = XKeycodeToKeysym(fl_display, keycode, 0);
-        }
-		*/
+			len = 1;        
       }
       // MRS: Can't use Fl::event_state(FL_CTRL) since the state is not
       //      set until set_event_xy() is called later...
@@ -1227,126 +1127,20 @@ int fl_handle(const gi_msg_t& thisevent)
       buffer[len] = 0;
       Fl::e_text = buffer;
       Fl::e_length = len;
-    } else { //up
-      
-      /*gi_msg_t peekevent;
-      if (XPending(fl_display)) {
-        XPeekEvent(fl_display, &peekevent);
-        if (   (peekevent.type == KeyPress) // must be a KeyPress event
-            && (peekevent.xkey.keycode == xevent.xkey.keycode) // must be the same key
-            && (peekevent.xkey.time == xevent.xkey.time) // must be sent at the exact same time
-            ) {
-          XNextEvent(fl_display, &xevent);
-          goto KEYPRESS;
-        }
-      }*/
+    } else { //up   
 
       event = FL_KEYUP;
       fl_key_vector[keycode/8] &= ~(1 << (keycode%8));
       // keyup events just get the unshifted keysym:
-      //keysym = XKeycodeToKeysym(fl_display, keycode, 0);
     }
 
-    // For the first few years, there wasn't a good consensus on what the
-    // Windows keys should be mapped to for X11. So we need to help out a
-    // bit and map all variants to the same FLTK key...
-    /*switch (keysym) {
-	case XK_Meta_L:
-	case XK_Hyper_L:
-	case XK_Super_L:
-	  keysym = FL_Meta_L;
-	  break;
-	case XK_Meta_R:
-	case XK_Hyper_R:
-	case XK_Super_R:
-	  keysym = FL_Meta_R;
-	  break;
-      }
-    // Convert the multimedia keys to safer, portable values
-    switch (keysym) { // XF names come from X11/XF86keysym.h
-      case 0x1008FF11: // XF86XK_AudioLowerVolume:
-	keysym = FL_Volume_Down;
-	break;
-      case 0x1008FF12: // XF86XK_AudioMute:
-	keysym = FL_Volume_Mute;
-	break;
-      case 0x1008FF13: // XF86XK_AudioRaiseVolume:
-	keysym = FL_Volume_Up;
-	break;
-      case 0x1008FF14: // XF86XK_AudioPlay:
-	keysym = FL_Media_Play;
-	break;
-      case 0x1008FF15: // XF86XK_AudioStop:
-	keysym = FL_Media_Stop;
-	break;
-      case 0x1008FF16: // XF86XK_AudioPrev:
-	keysym = FL_Media_Prev;
-	break;
-      case 0x1008FF17: // XF86XK_AudioNext:
-	keysym = FL_Media_Next;
-	break;
-      case 0x1008FF18: // XF86XK_HomePage:
-	keysym = FL_Home_Page;
-	break;
-      case 0x1008FF19: // XF86XK_Mail:
-	keysym = FL_Mail;
-	break;
-      case 0x1008FF1B: // XF86XK_Search:
-	keysym = FL_Search;
-	break;
-      case 0x1008FF26: // XF86XK_Back:
-	keysym = FL_Back;
-	break;
-      case 0x1008FF27: // XF86XK_Forward:
-	keysym = FL_Forward;
-	break;
-      case 0x1008FF28: // XF86XK_Stop:
-	keysym = FL_Stop;
-	break;
-      case 0x1008FF29: // XF86XK_Refresh:
-	keysym = FL_Refresh;
-	break;
-      case 0x1008FF2F: // XF86XK_Sleep:
-	keysym = FL_Sleep;
-	break;
-      case 0x1008FF30: // XF86XK_Favorites:
-	keysym = FL_Favorites;
-	break;
-    }*/
-    // We have to get rid of the XK_KP_function keys, because they are
-    // not produced on Windoze and thus case statements tend not to check
-    // for them.  There are 15 of these in the range 0xff91 ... 0xff9f
-    /*if (keysym >= 0xff91 && keysym <= 0xff9f) {
-      // Map keypad keysym to character or keysym depending on
-      // numlock state...
-      unsigned long keysym1 = XKeycodeToKeysym(fl_display, keycode, 1);
-      if (keysym1 <= 0x7f || (keysym1 > 0xff9f && keysym1 <= FL_KP_Last))
-        Fl::e_original_keysym = (int)(keysym1 | FL_KP);
-      if ((xevent.xkey.state & Mod2Mask) &&
-          (keysym1 <= 0x7f || (keysym1 > 0xff9f && keysym1 <= FL_KP_Last))) {
-        // Store ASCII numeric keypad value...
-        keysym = keysym1 | FL_KP;
-        buffer[0] = char(keysym1) & 0x7F;
-        len = 1;
-      } else {
-        // Map keypad to special key...
-        static const unsigned short table[15] = {
-          FL_F+1, FL_F+2, FL_F+3, FL_F+4,
-          FL_Home, FL_Left, FL_Up, FL_Right,
-          FL_Down, FL_Page_Up, FL_Page_Down, FL_End,
-          0xff0b, FL_Insert, FL_Delete};
-        keysym = table[keysym-0xff91];
-      }
-    } else {
-      // Store this so we can later know if the KP was used
-      Fl::e_original_keysym = (int)keysym;
-    }*/
+  
     Fl::e_keysym = int(keysym);
 
     // replace XK_ISO_Left_Tab (Shift-TAB) with FL_Tab (modifier flags are set correctly by X11)
     //if (Fl::e_keysym == 0xfe20) Fl::e_keysym = FL_Tab;
 
-    set_event_xy();
+    //set_event_xy();
     Fl::e_is_click = 0;
 
   }
@@ -1800,10 +1594,11 @@ void Fl_Window::label(const char *name,const char *iname) {
     int namelen = strlen(name);
     if (!iname) iname = fl_filename_name(name);
     int inamelen = strlen(iname);
-    gi_change_property( i->xid, fl_NET_WM_NAME,      fl_XaUtf8String, 8, 0, (uchar*)name,  namelen);	// utf8
-    gi_change_property( i->xid, GA_WM_NAME,          GA_STRING,       8, 0, (uchar*)name,  namelen);	// non-utf8
-    gi_change_property( i->xid, fl_NET_WM_ICON_NAME, fl_XaUtf8String, 8, 0, (uchar*)iname, inamelen);	// utf8
-    gi_change_property( i->xid, GA_WM_ICON_NAME,     GA_STRING,       8, 0, (uchar*)iname, inamelen);	// non-utf8
+	gi_set_window_utf8_caption(i->xid, name);
+    //gi_change_property( i->xid, fl_NET_WM_NAME,      fl_XaUtf8String, 8, 0, (uchar*)name,  namelen);	// utf8
+    //gi_change_property( i->xid, GA_WM_NAME,          GA_STRING,       8, 0, (uchar*)name,  namelen);	// non-utf8
+    //gi_change_property( i->xid, fl_NET_WM_ICON_NAME, fl_XaUtf8String, 8, 0, (uchar*)iname, inamelen);	// utf8
+    //gi_change_property( i->xid, GA_WM_ICON_NAME,     GA_STRING,       8, 0, (uchar*)iname, inamelen);	// non-utf8
   }
 }
 

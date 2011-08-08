@@ -339,7 +339,7 @@ void Fl_Xlib_Graphics_Driver::draw(const char* c, int n, int x, int y) {
 
 	  gi_ufont_set_format(myfont, GI_RENDER_a8);
 
-	if (y>gi_ufont_ascent_get(myfont))
+	//if (y>gi_ufont_ascent_get(myfont))
 	  {
 		  y-=gi_ufont_ascent_get(myfont);
 	  }

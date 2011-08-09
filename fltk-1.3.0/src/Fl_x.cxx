@@ -185,13 +185,18 @@ extern Fl_Window* fl_xmousewin;
 #endif
 static bool in_a_window; // true if in any of our windows, even destroyed ones
 static void do_queued_events() {
+  int err;
   in_a_window = true;
   //while (XEventsQueued(fl_display,QueuedAfterReading))
   while (gi_get_event_count()>0)
 	 {
     gi_msg_t xevent;
-    gi_get_message(&xevent, MSG_ALWAYS_WAIT);
-    fl_handle(xevent);
+
+    err = gi_get_message(&xevent, MSG_NO_WAIT);
+	if (err>0)
+		fl_handle(xevent);
+	else
+		break;
   }
   // we send FL_LEAVE only if the mouse did not enter some other window:
   if (!in_a_window) Fl::handle(FL_LEAVE, 0);
@@ -216,7 +221,7 @@ int fl_wait(double time_to_wait) {
   // OpenGL and other broken libraries call XEventsQueued
   // unnecessarily and thus cause the file descriptor to not be ready,
   // so we must check for already-read events:
-  if (fl_display>=0 && gi_get_event_count()) {do_queued_events(); return 1;}
+  if (fl_display>0 && gi_get_event_count()>0) {do_queued_events(); return 1;}
 
 #  if !USE_POLL
   fd_set fdt[3];
@@ -366,7 +371,14 @@ void fl_reset_spot(void)
 
 void fl_set_spot(int font, int size, int X, int Y, int W, int H, Fl_Window *win)
 {
-  
+ 	gi_composition_form_t attr;
+	//gi_window_info_t winfo;
+
+	//gi_get_window_info(fl_xid(win),&winfo);
+
+	attr.x = X;
+	attr.y = Y -  win->labelsize();
+	gi_ime_associate_window(fl_xid(win), &attr); 
 }
 
 void fl_set_status(int x, int y, int w, int h)
@@ -685,6 +697,7 @@ static const struct {unsigned short vk, fltk, extended;} vktab[] = {
   {G_KEY_TAB,	FL_Tab},
   {G_KEY_CLEAR,	FL_KP+'5',	0xff0b/*XK_Clear*/},
   {G_KEY_RETURN,	FL_Enter,	FL_KP_Enter},
+  {G_KEY_ENTER,	FL_Enter,	FL_KP_Enter},
   {G_KEY_LSHIFT,	FL_Shift_L,	FL_Shift_R},
   {G_KEY_LCTRL,	FL_Control_L,	FL_Control_R},
   {G_KEY_MENU,	FL_Alt_L,	FL_Alt_R},
@@ -692,17 +705,17 @@ static const struct {unsigned short vk, fltk, extended;} vktab[] = {
   {G_KEY_CAPSLOCK,	FL_Caps_Lock},
   {G_KEY_ESCAPE,	FL_Escape},
   {G_KEY_SPACE,	' '},
-  {G_KEY_PAGEUP,	FL_KP+'9',	FL_Page_Up},
-  {G_KEY_PAGEDOWN,	FL_KP+'3',	FL_Page_Down},
-  {G_KEY_END,	FL_KP+'1',	FL_End},
-  {G_KEY_HOME,	FL_KP+'7',	FL_Home},
-  {G_KEY_LEFT,	FL_KP+'4',	FL_Left},
-  {G_KEY_UP,	FL_KP+'8',	FL_Up},
-  {G_KEY_RIGHT,	FL_KP+'6',	FL_Right},
-  {G_KEY_DOWN,	FL_KP+'2',	FL_Down},
+  {G_KEY_PAGEUP,	FL_Page_Up,	FL_KP+'9'},
+  {G_KEY_PAGEDOWN,	FL_Page_Down,	FL_KP+'3'},
+  {G_KEY_END,	FL_End,	FL_KP+'1'},
+  {G_KEY_HOME,	FL_Home,	FL_KP+'7'},
+  {G_KEY_LEFT,	FL_Left,	FL_KP+'4'},
+  {G_KEY_UP,	FL_Up,	FL_KP+'8'},
+  {G_KEY_RIGHT,	FL_Right,	FL_KP+'6'},
+  {G_KEY_DOWN,	FL_Down,	FL_KP+'2'},
   {G_KEY_PRINT,	FL_Print},	// does not work on NT
-  {G_KEY_INSERT,	FL_KP+'0',	FL_Insert},
-  {G_KEY_DELETE,	FL_KP+'.',	FL_Delete},
+  {G_KEY_INSERT,	FL_Insert,	FL_KP+'0'},
+  {G_KEY_DELETE,	FL_Delete,	FL_KP+'.'},
   {G_KEY_LMETA,	FL_Meta_L},
   {G_KEY_RMETA,	FL_Meta_R},
   //{G_KEY_APPS,	FL_Menu},
@@ -1054,20 +1067,29 @@ int fl_handle(const gi_msg_t& thisevent)
 	  {
 	Fl_X *i = Fl_X::i(window);
 
+
     i->wait_for_expose = 0;
 
 //#else
 //  case GI_MSG_EXPOSURE:
+
+	//window->clear_damage((uchar)(window->damage()|FL_DAMAGE_EXPOSE));
+
     window->damage(FL_DAMAGE_EXPOSE, xevent.body.rect.x, xevent.body.rect.y,
                    xevent.body.rect.w, xevent.body.rect.h);
 
 	
 	i->flush();
+
+  printf("GI_MSG_EXPOSURE event got for %d\n", xevent.ev_window);
+
+	//window->clear_damage();
     return 1;
 	  }
 #endif
   case GI_MSG_FOCUS_IN:
 	  {
+#if 1
 	gi_composition_form_t attr;
 	gi_window_info_t winfo;
 
@@ -1076,6 +1098,7 @@ int fl_handle(const gi_msg_t& thisevent)
 	attr.x = winfo.x  + 10;
 	attr.y = winfo.y + winfo.height - 30;
 	gi_ime_associate_window(xevent.ev_window, &attr);
+#endif
     //if (fl_xim_ic) XSetICFocus(fl_xim_ic);
     event = FL_FOCUS;
 	  }
@@ -1117,7 +1140,7 @@ int fl_handle(const gi_msg_t& thisevent)
 		}
 		else
 		 {
-			Fl::e_keysym = Fl::e_original_keysym = ms2fltk(keycode,1);
+			Fl::e_keysym = Fl::e_original_keysym = ms2fltk(keycode,0);
 			buffer[0] = keycode;
 			len = 1;        
       }
@@ -1228,6 +1251,8 @@ int fl_handle(const gi_msg_t& thisevent)
   // So anyway, do a round trip to find the correct x,y:
   case GI_MSG_WINDOW_SHOW:
     event = FL_SHOW;
+  printf("GI_MSG_WINDOW_SHOW event got for %d\n", xevent.ev_window);
+  break;
 
   case GI_MSG_CONFIGURENOTIFY: {
     if (window->parent()) break; // ignore child windows
@@ -1343,12 +1368,16 @@ static const int childEventMask = GI_MASK_EXPOSURE;
 static const int XEventMask = GI_MASK_SELECTIONNOTIFY | GI_MASK_PROPERTYNOTIFY |
 	  GI_MASK_MOUSE_ENTER | GI_MASK_MOUSE_EXIT| GI_MASK_MOUSE_MOVE|
 	  GI_MASK_FOCUS_IN | GI_MASK_EXPOSURE | GI_MASK_BUTTON_DOWN|
-	  GI_MASK_BUTTON_UP|GI_MASK_KEY_UP|GI_MASK_KEY_DOWN;
+	  GI_MASK_BUTTON_UP|GI_MASK_KEY_UP|GI_MASK_KEY_DOWN|
+	   GI_MASK_CLIENT_MSG| GI_MASK_CONFIGURENOTIFY | GI_MASK_REPARENT;
+
+	   //GI_MASK_WINDOW_HIDE|GI_MASK_WINDOW_SHOW |
 
 void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
 {
   Fl_Group::current(0); // get rid of very common user bug: forgot end()
   long bgcolor=0, style = 0;
+  long event_mask = XEventMask;
 
   bgcolor = GI_RGB(240,240,242);
 
@@ -1401,10 +1430,10 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
 
   ulong root = win->parent() ?
     fl_xid(win->window()) : GI_DESKTOP_WINDOW_ID;
+  //event_mask = win->parent() ? childEventMask : XEventMask;
 
   /*XSetWindowAttributes attr;
   int mask = CWBorderPixel|CWColormap|CWEventMask|CWBitGravity;
-  attr.event_mask = win->parent() ? childEventMask : XEventMask;
   attr.colormap = colormap;
   attr.border_pixel = 0;
   attr.bit_gravity = 0; // StaticGravity;*/
@@ -1441,6 +1470,7 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
                                style);  
 
   Fl_X* xp =  set_xid(win, newwin);
+  gi_set_events_mask(newwin, event_mask);
 
   printf("%s: newwin=%d, root=%d\n",__FUNCTION__, newwin, root);
   int showit = 1;
@@ -1520,7 +1550,8 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
     gi_change_property( xp->xid, net_wm_type, GA_ATOM, 32, G_PROP_MODE_Replace, (unsigned char*)&net_wm_type_kind, 1);
   }
 
-  gi_show_window( xp->xid);
+  //gi_show_window( xp->xid);
+   XMapWindow(fl_display, xp->xid); 
   if (showit) {
     win->set_visible();
     int old_event = Fl::e_number;
@@ -1635,7 +1666,8 @@ void Fl_Window::show() {
     Fl_X::make_xid(this);
   } else {
     gi_raise_window( i->xid);
-    gi_show_window( i->xid);
+	 XMapWindow(fl_display, i->xid); 
+    //gi_show_window( i->xid);
   }
 
   

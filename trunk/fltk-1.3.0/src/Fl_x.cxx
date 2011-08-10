@@ -188,16 +188,17 @@ static void do_queued_events() {
   int err;
   in_a_window = true;
   //while (XEventsQueued(fl_display,QueuedAfterReading))
-  while (gi_get_event_count()>0)
-	 {
+  //while (gi_get_event_count()>0)
+	 do{
     gi_msg_t xevent;
 
-    err = gi_get_message(&xevent, MSG_NO_WAIT);
+    //err = gi_get_message(&xevent, MSG_NO_WAIT);
+	err = gi_next_message(&xevent);
 	if (err>0)
 		fl_handle(xevent);
-	else
-		break;
-  }
+	//else
+	//	break;
+  }while(0);
   // we send FL_LEAVE only if the mouse did not enter some other window:
   if (!in_a_window) Fl::handle(FL_LEAVE, 0);
 #if CONSOLIDATE_MOTION
@@ -221,7 +222,7 @@ int fl_wait(double time_to_wait) {
   // OpenGL and other broken libraries call XEventsQueued
   // unnecessarily and thus cause the file descriptor to not be ready,
   // so we must check for already-read events:
-  if (fl_display>0 && gi_get_event_count()>0) {do_queued_events(); return 1;}
+  //if (fl_display>0 && gi_get_event_count()>0) {do_queued_events(); return 1;}
 
 #  if !USE_POLL
   fd_set fdt[3];
@@ -238,6 +239,7 @@ int fl_wait(double time_to_wait) {
     n = ::poll(pollfds, nfds, int(time_to_wait*1000 + .5));
 #  else
     timeval t;
+
     t.tv_sec = int(time_to_wait);
     t.tv_usec = int(1000000 * (time_to_wait-t.tv_sec));
     n = ::select(maxfd+1,&fdt[0],&fdt[1],&fdt[2],&t);
@@ -246,7 +248,10 @@ int fl_wait(double time_to_wait) {
 #  if USE_POLL
     n = ::poll(pollfds, nfds, -1);
 #  else
-    n = ::select(maxfd+1,&fdt[0],&fdt[1],&fdt[2],0);
+   n = ::select(maxfd+1,&fdt[0],&fdt[1],&fdt[2],0);
+   //n = ::select(maxfd+1,&fdt[0],0,0,0);
+
+
 #  endif
   }
 
@@ -255,6 +260,7 @@ int fl_wait(double time_to_wait) {
   if (n > 0) {
     for (int i=0; i<nfds; i++) {
 #  if USE_POLL
+#error "use poll"
       if (pollfds[i].revents) fd[i].cb(pollfds[i].fd, fd[i].arg);
 #  else
       int f = fd[i].fd;
@@ -262,6 +268,7 @@ int fl_wait(double time_to_wait) {
       if (FD_ISSET(f,&fdt[0])) revents |= POLLIN;
       if (FD_ISSET(f,&fdt[1])) revents |= POLLOUT;
       if (FD_ISSET(f,&fdt[2])) revents |= POLLERR;
+
       if (fd[i].events & revents) fd[i].cb(f, fd[i].arg);
 #  endif
     }
@@ -302,7 +309,7 @@ static void convert_crlf(unsigned char *string, long& len) {
 
 ////////////////////////////////////////////////////////////////
 
-int fl_display;
+int fl_display=0;
 gi_window_id_t fl_message_window = 0;
 int fl_screen;
 gi_screen_info_t *fl_visual;
@@ -394,6 +401,13 @@ void fl_open_display(void) {
   if (fl_display) return;
 
   setlocale(LC_CTYPE, "");
+
+  FD_ZERO(&fdsets[0]);
+  FD_ZERO(&fdsets[1]);
+  FD_ZERO(&fdsets[2]);
+  maxfd = 0;
+
+  //memset(fdsets,0,sizeof(fdsets));
  
   int d = gi_init();
   if (d<0) Fl::fatal("Can't open display");
@@ -1113,6 +1127,7 @@ int fl_handle(const gi_msg_t& thisevent)
 
   case GI_MSG_KEY_DOWN:
   case GI_MSG_KEY_UP: {
+	  ulong state;
 
   //KEYPRESS:
     int keycode = xevent.params[3];
@@ -1150,15 +1165,23 @@ int fl_handle(const gi_msg_t& thisevent)
       buffer[len] = 0;
       Fl::e_text = buffer;
       Fl::e_length = len;
-    } else { //up   
+	  state = Fl::e_state & 0xff000000;
+	  state |= mods_to_key_state(xevent.body.message[3]);
+    } else { //up  
+	
+	  state = Fl::e_state & 0xff000000;
+	  state |= mods_to_key_state(xevent.body.message[3]);
 
       event = FL_KEYUP;
+	  Fl::e_keysym = Fl::e_original_keysym = ms2fltk(keycode,0);
+			buffer[0] = keycode;
+			len = 1; 
       fl_key_vector[keycode/8] &= ~(1 << (keycode%8));
       // keyup events just get the unshifted keysym:
     }
 
   
-    Fl::e_keysym = int(keysym);
+    //Fl::e_keysym = int(keysym);
 
     // replace XK_ISO_Left_Tab (Shift-TAB) with FL_Tab (modifier flags are set correctly by X11)
     //if (Fl::e_keysym == 0xfe20) Fl::e_keysym = FL_Tab;

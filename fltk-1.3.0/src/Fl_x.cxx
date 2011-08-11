@@ -186,19 +186,23 @@ extern Fl_Window* fl_xmousewin;
 static bool in_a_window; // true if in any of our windows, even destroyed ones
 static void do_queued_events() {
   int err;
+  int n;
   in_a_window = true;
   //while (XEventsQueued(fl_display,QueuedAfterReading))
-  //while (gi_get_event_count()>0)
-	 do{
+
+  n = gi_get_event_count();
+  while (n>0)
+	{
     gi_msg_t xevent;
 
     //err = gi_get_message(&xevent, MSG_NO_WAIT);
 	err = gi_next_message(&xevent);
 	if (err>0)
 		fl_handle(xevent);
-	//else
-	//	break;
-  }while(0);
+	else
+		break;
+	n--;
+  }
   // we send FL_LEAVE only if the mouse did not enter some other window:
   if (!in_a_window) Fl::handle(FL_LEAVE, 0);
 #if CONSOLIDATE_MOTION
@@ -378,14 +382,13 @@ void fl_reset_spot(void)
 
 void fl_set_spot(int font, int size, int X, int Y, int W, int H, Fl_Window *win)
 {
+#if 1
  	gi_composition_form_t attr;
-	//gi_window_info_t winfo;
-
-	//gi_get_window_info(fl_xid(win),&winfo);
 
 	attr.x = X;
 	attr.y = Y -  win->labelsize();
 	gi_ime_associate_window(fl_xid(win), &attr); 
+#endif
 }
 
 void fl_set_status(int x, int y, int w, int h)
@@ -590,6 +593,31 @@ void fl_sendClientMessage(gi_window_id_t window, gi_atom_id_t message,
   gi_send_event( window, 0, 0, &e);
 }
 
+
+/**
+ * convert the current mouse chord into the FLTK modifier state
+ */
+static int mods_to_key_state( long mods )
+{
+  int state = 0;
+  if ( mods & G_MODIFIERS_NUMLOCK ) state |= FL_NUM_LOCK;
+  if ( mods & G_MODIFIERS_META ) state |= FL_META;
+  if ( mods & (G_MODIFIERS_ALT) ) state |= FL_ALT;
+  if ( mods & G_MODIFIERS_CTRL ) state |= FL_CTRL;
+  if ( mods & G_MODIFIERS_SHIFT ) state |= FL_SHIFT;
+  if ( mods & G_MODIFIERS_CAPSLOCK ) state |= FL_CAPS_LOCK;
+  return state;
+}
+
+static int mods_to_mouse_state( long mods ){
+  int state = 0;
+  if (mods & GI_BUTTON_L) state |= FL_BUTTON1;
+  if (mods & GI_BUTTON_M) state |= FL_BUTTON2;
+  if (mods & GI_BUTTON_R) state |= FL_BUTTON3;
+  return state;
+}
+
+
 ////////////////////////////////////////////////////////////////
 // Code for copying to clipboard and DnD out of the program:
 
@@ -620,7 +648,7 @@ char fl_key_vector[32]; // used by Fl::get_key()
 static int px, py;
 static ulong ptime;
 
-static void set_event_xy() {
+static void set_event_xy(long key, int mouse) {
 #  if CONSOLIDATE_MOTION
   send_motion = 0;
 #  endif
@@ -630,12 +658,10 @@ static void set_event_xy() {
   Fl::e_y       = fl_xevent->body.rect.y;
 
   
-  //Fl::e_state   = fl_xevent->xbutton.state << 16; //fixme dpp
+  Fl::e_state   = mods_to_key_state(key); //
+  Fl::e_state   |= mods_to_mouse_state(mouse); //fixme dpp
   fl_event_time = fl_xevent->time;
-#  ifdef __sgi
-  // get the meta key off PC keyboards:
-  if (fl_key_vector[18]&0x18) Fl::e_state |= FL_META;
-#  endif
+
   // turn off is_click if enough time or mouse movement has passed:
   if (abs(Fl::e_x_root-px)+abs(Fl::e_y_root-py) > 3 ||
       fl_event_time >= ptime+1000)
@@ -661,29 +687,6 @@ static Fl_Window* resize_bug_fix;
 
 static char unknown[] = "<unknown>";
 const int unknown_len = 10;
-
-/**
- * convert the current mouse chord into the FLTK modifier state
- */
-static int mods_to_key_state( long mods )
-{
-  int state = 0;
-  if ( mods & G_MODIFIERS_NUMLOCK ) state |= FL_NUM_LOCK;
-  if ( mods & G_MODIFIERS_META ) state |= FL_META;
-  if ( mods & (G_MODIFIERS_ALT) ) state |= FL_ALT;
-  if ( mods & G_MODIFIERS_CTRL ) state |= FL_CTRL;
-  if ( mods & G_MODIFIERS_SHIFT ) state |= FL_SHIFT;
-  if ( mods & G_MODIFIERS_CAPSLOCK ) state |= FL_CAPS_LOCK;
-  return state;
-}
-
-static int mods_to_mouse_state( long mods ){
-  int state = 0;
-  if (mods & GI_BUTTON_L) state |= FL_BUTTON1;
-  if (mods & GI_BUTTON_M) state |= FL_BUTTON2;
-  if (mods & GI_BUTTON_R) state |= FL_BUTTON3;
-  return state;
-}
 
 
 
@@ -1113,6 +1116,7 @@ int fl_handle(const gi_msg_t& thisevent)
 	attr.y = winfo.y + winfo.height - 30;
 	gi_ime_associate_window(xevent.ev_window, &attr);
 #endif
+	
     //if (fl_xim_ic) XSetICFocus(fl_xim_ic);
     event = FL_FOCUS;
 	  }
@@ -1128,6 +1132,8 @@ int fl_handle(const gi_msg_t& thisevent)
   case GI_MSG_KEY_DOWN:
   case GI_MSG_KEY_UP: {
 	  ulong state;
+
+	  
 
   //KEYPRESS:
     int keycode = xevent.params[3];
@@ -1167,6 +1173,7 @@ int fl_handle(const gi_msg_t& thisevent)
       Fl::e_length = len;
 	  state = Fl::e_state & 0xff000000;
 	  state |= mods_to_key_state(xevent.body.message[3]);
+	  Fl::e_state = state;
     } else { //up  
 	
 	  state = Fl::e_state & 0xff000000;
@@ -1177,6 +1184,9 @@ int fl_handle(const gi_msg_t& thisevent)
 			buffer[0] = keycode;
 			len = 1; 
       fl_key_vector[keycode/8] &= ~(1 << (keycode%8));
+
+	  Fl::e_state = state;
+	  gi_set_focus_window(xevent.ev_window);
       // keyup events just get the unshifted keysym:
     }
 
@@ -1195,7 +1205,7 @@ int fl_handle(const gi_msg_t& thisevent)
   case GI_MSG_BUTTON_DOWN:
 	xbutton = get_mouse_button(xevent.params[2]);
     Fl::e_keysym = FL_Button + xbutton;
-    set_event_xy();
+    set_event_xy(xevent.body.message[3], xevent.params[2]);
     if (xbutton == 4) {
       Fl::e_dy = -1; // Up
       event = FL_MOUSEWHEEL;
@@ -1213,7 +1223,7 @@ int fl_handle(const gi_msg_t& thisevent)
     break;
 
   case GI_MSG_MOUSE_MOVE:
-    set_event_xy();
+    set_event_xy(xevent.params[3], xevent.params[2]);
 #  if CONSOLIDATE_MOTION
     send_motion = fl_xmousewin = window;
     in_a_window = true;
@@ -1228,7 +1238,7 @@ int fl_handle(const gi_msg_t& thisevent)
   case GI_MSG_BUTTON_UP:
 	xbutton = get_mouse_button(xevent.params[3]);
     Fl::e_keysym = FL_Button + xbutton;
-    set_event_xy();
+    set_event_xy(xevent.body.message[3], xevent.params[3]);
 	//Fl::e_state = mods_to_mouse_state(xevent.body.message[3];
     Fl::e_state &= ~(FL_BUTTON1 << (xbutton-1));
     if (xbutton == 4 ||
@@ -1242,7 +1252,7 @@ int fl_handle(const gi_msg_t& thisevent)
   case GI_MSG_MOUSE_ENTER:
     //if (xevent.xcrossing.detail == NotifyInferior) break;
     // XInstallColormap(fl_display, Fl_X::i(window)->colormap);
-    set_event_xy();
+    //set_event_xy();
     //Fl::e_state = xevent.xcrossing.state << 16; //fixme
     event = FL_ENTER;
 
@@ -1259,7 +1269,7 @@ int fl_handle(const gi_msg_t& thisevent)
 
   case GI_MSG_MOUSE_EXIT:
     //if (xevent.xcrossing.detail == NotifyInferior) break;
-    set_event_xy();
+    //set_event_xy();
     //Fl::e_state = xevent.xcrossing.state << 16;
     fl_xmousewin = 0;
     in_a_window = false; // make do_queued_events produce FL_LEAVE event
@@ -1473,7 +1483,7 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
 	   }//attr.override_redirect = 1; mask |= CWOverrideRedirect;
   } 
 
- // if (!win->modal()) style |= (GI_FLAGS_NON_FRAME | GI_FLAGS_MENU_WINDOW);
+  if (win->modal()) style |= ( GI_FLAGS_MENU_WINDOW | GI_FLAGS_TEMP_WINDOW);
 
   if (fl_background_pixel >= 0) {
     //bgcolor = fl_background_pixel;

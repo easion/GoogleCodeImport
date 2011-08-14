@@ -160,17 +160,20 @@ void fl_delete_bitmask(Fl_Bitmask bm) {
 
 #elif defined(USE_GIX)
 
+ 
 Fl_Bitmask fl_create_bitmask(int w, int h, const uchar *data) {
   Fl_Bitmask bm = 0; //FIXME DPP
-   //gi_create_region_from_bitmap(fl_display, fl_window, (const char *)data,
-             //                  (w+7)&-8, h);
+  bm = (Fl_Bitmask)gi_create_bitmap_from_data( (char *)data,
+                               (w+7)&-8, h);
 
-  //return gi_create_region_from_pixmap();
+  fprintf(stderr, "fl_create_bitmask calling ...\n");
   return bm;
 }
 
 void fl_delete_bitmask(Fl_Bitmask bm) {
-  fl_delete_offscreen((Fl_Offscreen)bm);
+  fprintf(stderr, "fl_create_bitmask calling ...\n");
+  //fl_delete_offscreen((Fl_Offscreen)bm);
+  gi_destroy_image((gi_image_t*)bm);
 }
 
 
@@ -314,16 +317,38 @@ void Fl_Xlib_Graphics_Driver::draw(Fl_Bitmap *bm, int XP, int YP, int WP, int HP
     return;
   }
   if (!bm->id_) bm->id_ = fl_create_bitmask(bm->w(), bm->h(), bm->array);
+  fprintf(stderr, "Fl_Xlib_Graphics_Driver::draw calling ...\n");
   
   //XSetStipple( fl_gc, bm->id_); //fixme dpp
   int ox = X-cx; if (ox < 0) ox += bm->w();
   int oy = Y-cy; if (oy < 0) oy += bm->h();
-  gi_gc_set_clip_origin( fl_gc, ox, oy);
-  gi_set_fillstyle( fl_gc, GI_GC_FILL_STIPPLED);
+
   gi_gc_attch_window(fl_gc,fl_window);
-  gi_fill_rect(  fl_gc, X, Y, W, H);
-  gi_set_fillstyle( fl_gc, GI_GC_FILL_SOLID);
-  printf("%s calling\n",__FUNCTION__);
+
+  //gi_bitblt_image(fl_gc, ox, oy, W, H, (gi_image_t*)bm->id_,X, Y);
+  gi_bitblt_image(fl_gc, cx, cy, W, H, (gi_image_t*)bm->id_,X, Y);
+
+
+/*
+  if ( !id )
+    id = fl_create_bitmask( w(), h(), array );
+  // printf( "XP %d YP %d WP %d HP %d X %d Y %d W %d H %d cx %d cy %d\n",XP,YP,WP,HP,X,Y,W,H,cx,cy);
+  // int ox = X-cx; if (ox < 0) ox += w();
+  // int oy = Y-cy; if (oy < 0) oy += h();
+  DFBRectangle rect;
+  rect.x = cx;rect.y=cy;rect.w=W;rect.h=H;
+  uchar r,g,b;
+  get_rgb_color( fl_xpixel(fl_color()), r, g, b );
+
+  set_color( fl_gc, r, g, b, 255 );
+  set_blitting_flags( fl_gc, DSBLIT_COLORIZE | DSBLIT_BLEND_ALPHACHANNEL );
+  set_src_blend_function( (GC)id, DSBF_SRCALPHA );
+  set_dst_blend_function( fl_gc, DSBF_INVSRCALPHA );
+
+  blit( fl_gc, (GC)id, &rect, X, Y );
+  set_blitting_flags( fl_gc, DSBLIT_NOFX );
+
+*/
 }
 #elif defined(WIN32)
 void Fl_GDI_Graphics_Driver::draw(Fl_Bitmap *bm, int XP, int YP, int WP, int HP, int cx, int cy) {

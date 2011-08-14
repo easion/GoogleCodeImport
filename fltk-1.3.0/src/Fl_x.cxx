@@ -184,13 +184,13 @@ static Fl_Window* send_motion;
 extern Fl_Window* fl_xmousewin;
 #endif
 static bool in_a_window; // true if in any of our windows, even destroyed ones
-static void do_queued_events() {
+static void do_queued_events(int n) {
   int err;
-  int n;
+  //int n;
   in_a_window = true;
   //while (XEventsQueued(fl_display,QueuedAfterReading))
 
-  n = gi_get_event_count();
+  
   while (n>0)
 	{
     gi_msg_t xevent;
@@ -222,11 +222,12 @@ void (*fl_unlock_function)() = nothing;
 // It should return negative on error, 0 if nothing happens before
 // timeout, and >0 if any callbacks were done.
 int fl_wait(double time_to_wait) {
+	int n = 0;
 
   // OpenGL and other broken libraries call XEventsQueued
   // unnecessarily and thus cause the file descriptor to not be ready,
   // so we must check for already-read events:
-  //if (fl_display>0 && gi_get_event_count()>0) {do_queued_events(); return 1;}
+  if (fl_display>0 && (n=gi_get_event_count())>0) {do_queued_events(n); return 1;}
 
 #  if !USE_POLL
   fd_set fdt[3];
@@ -234,7 +235,6 @@ int fl_wait(double time_to_wait) {
   fdt[1] = fdsets[1];
   fdt[2] = fdsets[2];
 #  endif
-  int n;
 
   fl_unlock_function();
 
@@ -253,9 +253,6 @@ int fl_wait(double time_to_wait) {
     n = ::poll(pollfds, nfds, -1);
 #  else
    n = ::select(maxfd+1,&fdt[0],&fdt[1],&fdt[2],0);
-   //n = ::select(maxfd+1,&fdt[0],0,0,0);
-
-
 #  endif
   }
 
@@ -321,7 +318,7 @@ gi_screen_info_t *fl_visual;
 //XIM fl_xim_im = 0;
 //XIC fl_xim_ic = 0;
 char fl_is_over_the_spot = 0;
-static XRectangle status_area;
+//static XRectangle status_area;
 
 //static gi_atom_id_t WM_DELETE_WINDOW;
 static gi_atom_id_t WM_PROTOCOLS;
@@ -358,7 +355,8 @@ gi_atom_id_t fl_NET_WM_ICON_NAME;		// utf8 aware window icon name
 static int atom_bits = 32;
 
 static void fd_callback(int,void *) {
-  do_queued_events();
+  int n = gi_get_event_count();
+  do_queued_events(n);
 }
 
 extern char *fl_get_font_xfld(int fnum, int size);
@@ -370,8 +368,8 @@ void fl_new_ic()
 
 
 static XRectangle    spot;
-static int spotf = -1;
-static int spots = -1;
+//static int spotf = -1;
+//static int spots = -1;
 
 void fl_reset_spot(void)
 {
@@ -581,15 +579,20 @@ void fl_sendClientMessage(gi_window_id_t window, gi_atom_id_t message,
                                  unsigned long d4=0)
 {
   gi_msg_t e;
+  uint32_t *data;
+
+  printf("fl_sendClientMessage: send to %d\n", window);
+
+  data = &e.params[0];
   e.type = GI_MSG_CLIENT_MSG;
   e.ev_window = window;
   e.body.client.client_type = message;
   e.body.client.client_format = 32;
-  e.params[0] = (long)d0;
-  e.params[1] = (long)d1;
-  e.params[2] = (long)d2;
-  e.params[3] = (long)d3;
-  e.body.message[0] = (long)d4;
+  data[0] = (long)d0;
+  data[1] = (long)d1;
+  data[2] = (long)d2;
+  data[3] = (long)d3;
+  data[0] = (long)d4;
   gi_send_event( window, 0, 0, &e);
 }
 
@@ -688,6 +691,7 @@ static Fl_Window* resize_bug_fix;
 static char unknown[] = "<unknown>";
 const int unknown_len = 10;
 
+int gix2fltk(int vk) ;
 
 
 static int get_mouse_button(int flags)
@@ -706,99 +710,13 @@ static int get_mouse_button(int flags)
 }
 
 
-// convert a MSWindows G_KEY_x to an Fltk (X) Keysym:
-// See also the inverse converter in Fl_get_key_win32.cxx
-// This table is in numeric order by VK:
-static const struct {unsigned short vk, fltk, extended;} vktab[] = {
-  {G_KEY_BACKSPACE,	FL_BackSpace},
-  {G_KEY_TAB,	FL_Tab},
-  {G_KEY_CLEAR,	FL_KP+'5',	0xff0b/*XK_Clear*/},
-  {G_KEY_RETURN,	FL_Enter,	FL_KP_Enter},
-  {G_KEY_ENTER,	FL_Enter,	FL_KP_Enter},
-  {G_KEY_LSHIFT,	FL_Shift_L,	FL_Shift_R},
-  {G_KEY_LCTRL,	FL_Control_L,	FL_Control_R},
-  {G_KEY_MENU,	FL_Alt_L,	FL_Alt_R},
-  {G_KEY_PAUSE,	FL_Pause},
-  {G_KEY_CAPSLOCK,	FL_Caps_Lock},
-  {G_KEY_ESCAPE,	FL_Escape},
-  {G_KEY_SPACE,	' '},
-  {G_KEY_PAGEUP,	FL_Page_Up,	FL_KP+'9'},
-  {G_KEY_PAGEDOWN,	FL_Page_Down,	FL_KP+'3'},
-  {G_KEY_END,	FL_End,	FL_KP+'1'},
-  {G_KEY_HOME,	FL_Home,	FL_KP+'7'},
-  {G_KEY_LEFT,	FL_Left,	FL_KP+'4'},
-  {G_KEY_UP,	FL_Up,	FL_KP+'8'},
-  {G_KEY_RIGHT,	FL_Right,	FL_KP+'6'},
-  {G_KEY_DOWN,	FL_Down,	FL_KP+'2'},
-  {G_KEY_PRINT,	FL_Print},	// does not work on NT
-  {G_KEY_INSERT,	FL_Insert,	FL_KP+'0'},
-  {G_KEY_DELETE,	FL_Delete,	FL_KP+'.'},
-  {G_KEY_LMETA,	FL_Meta_L},
-  {G_KEY_RMETA,	FL_Meta_R},
-  //{G_KEY_APPS,	FL_Menu},
-  //{G_KEY_SLEEP, FL_Sleep},
-  {G_KEY_ASTERISK,	FL_KP+'*'},
-  {G_KEY_PLUS,	FL_KP+'+'},
-  {G_KEY_MINUS,	FL_KP+'-'},
-  {G_KEY_PERIOD,	FL_KP+'.'},
-  {G_KEY_SLASH,	FL_KP+'/'},
-  {G_KEY_NUMLOCK,	FL_Num_Lock},
-  {G_KEY_SCROLLOCK,	FL_Scroll_Lock},
-/*
-# if defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0500)
-  {G_KEY_BROWSER_BACK, FL_Back},
-  {G_KEY_BROWSER_FORWARD, FL_Forward},
-  {G_KEY_BROWSER_REFRESH, FL_Refresh},
-  {G_KEY_BROWSER_STOP, FL_Stop},
-  {G_KEY_BROWSER_SEARCH, FL_Search},
-  {G_KEY_BROWSER_FAVORITES, FL_Favorites},
-  {G_KEY_BROWSER_HOME, FL_Home_Page},
-  {G_KEY_VOLUME_MUTE, FL_Volume_Mute},
-  {G_KEY_VOLUME_DOWN, FL_Volume_Down},
-  {G_KEY_VOLUME_UP, FL_Volume_Up},
-  {G_KEY_MEDIA_NEXT_TRACK, FL_Media_Next},
-  {G_KEY_MEDIA_PREV_TRACK, FL_Media_Prev},
-  {G_KEY_MEDIA_STOP, FL_Media_Stop},
-  {G_KEY_MEDIA_PLAY_PAUSE, FL_Media_Play},
-  {G_KEY_LAUNCH_MAIL, FL_Mail},
-#endif
-*/
-  {0xba,	';'},
-  {0xbb,	'='},
-  {0xbc,	','},
-  {0xbd,	'-'},
-  {0xbe,	'.'},
-  {0xbf,	'/'},
-  {0xc0,	'`'},
-  {0xdb,	'['},
-  {0xdc,	'\\'},
-  {0xdd,	']'},
-  {0xde,	'\''}
-};
-static int ms2fltk(int vk, int extended) {
-  static unsigned short vklut[256];
-  static unsigned short extendedlut[256];
-  if (!vklut[1]) { // init the table
-    unsigned int i;
-    for (i = 0; i < 256; i++) vklut[i] = tolower(i);
-    for (i=G_KEY_F1; i<=G_KEY_F15; i++) vklut[i] = i+(FL_F-(G_KEY_F1-1));
-    for (i=G_KEY_KP0; i<=G_KEY_KP9; i++) vklut[i] = i+(FL_KP+'0'-G_KEY_KP0);
-    for (i = 0; i < sizeof(vktab)/sizeof(*vktab); i++) {
-      vklut[vktab[i].vk] = vktab[i].fltk;
-      extendedlut[vktab[i].vk] = vktab[i].extended;
-    }
-    for (i = 0; i < 256; i++) if (!extendedlut[i]) extendedlut[i] = vklut[i];
-  }
-  return extended ? extendedlut[vk] : vklut[vk];
-}
-
 
 int fl_handle(const gi_msg_t& thisevent)
 {
   gi_msg_t xevent = thisevent;
   fl_xevent = &thisevent;
   gi_window_id_t xid = xevent.ev_window;
-  static gi_window_id_t xim_win = 0;
+  //static gi_window_id_t xim_win = 0;
   int xbutton;
 
   if(xevent.type == GI_MSG_SELECTIONNOTIFY)
@@ -1098,7 +1016,7 @@ int fl_handle(const gi_msg_t& thisevent)
 	
 	i->flush();
 
-  printf("GI_MSG_EXPOSURE event got for %d\n", xevent.ev_window);
+  //printf("GI_MSG_EXPOSURE event got for %d\n", xevent.ev_window);
 
 	//window->clear_damage();
     return 1;
@@ -1161,7 +1079,7 @@ int fl_handle(const gi_msg_t& thisevent)
 		}
 		else
 		 {
-			Fl::e_keysym = Fl::e_original_keysym = ms2fltk(keycode,0);
+			Fl::e_keysym = Fl::e_original_keysym = gix2fltk(keycode);
 			buffer[0] = keycode;
 			len = 1;        
       }
@@ -1180,7 +1098,7 @@ int fl_handle(const gi_msg_t& thisevent)
 	  state |= mods_to_key_state(xevent.body.message[3]);
 
       event = FL_KEYUP;
-	  Fl::e_keysym = Fl::e_original_keysym = ms2fltk(keycode,0);
+	  Fl::e_keysym = Fl::e_original_keysym = gix2fltk(keycode);
 			buffer[0] = keycode;
 			len = 1; 
       fl_key_vector[keycode/8] &= ~(1 << (keycode%8));
@@ -1205,7 +1123,7 @@ int fl_handle(const gi_msg_t& thisevent)
   case GI_MSG_BUTTON_DOWN:
 	xbutton = get_mouse_button(xevent.params[2]);
     Fl::e_keysym = FL_Button + xbutton;
-    set_event_xy(xevent.body.message[3], xevent.params[2]);
+    
     if (xbutton == 4) {
       Fl::e_dy = -1; // Up
       event = FL_MOUSEWHEEL;
@@ -1213,7 +1131,8 @@ int fl_handle(const gi_msg_t& thisevent)
       Fl::e_dy = +1; // Down
       event = FL_MOUSEWHEEL;
     } else {
-      Fl::e_state |= (FL_BUTTON1 << (xbutton-1));
+      //Fl::e_state |= (FL_BUTTON1 << (xbutton-1));
+	  set_event_xy(xevent.body.message[3], xevent.params[2]);
       event = FL_PUSH;
       checkdouble();
     }
@@ -1284,7 +1203,7 @@ int fl_handle(const gi_msg_t& thisevent)
   // So anyway, do a round trip to find the correct x,y:
   case GI_MSG_WINDOW_SHOW:
     event = FL_SHOW;
-  printf("GI_MSG_WINDOW_SHOW event got for %d\n", xevent.ev_window);
+  //printf("GI_MSG_WINDOW_SHOW event got for %d\n", xevent.ev_window);
   break;
 
   case GI_MSG_CONFIGURENOTIFY: {
@@ -1392,7 +1311,7 @@ Fl_X* Fl_X::set_xid(Fl_Window* win, gi_window_id_t winxid) {
 // normally.  The global variables like fl_show_iconic are so that
 // subclasses of *that* class may change the behavior...
 
-char fl_show_iconic;    // hack for iconize()
+char fl_show_iconic = 0;    // hack for iconize()
 int fl_background_pixel = -1; // hack to speed up bg box drawing
 int fl_disable_transient_for = 0; // secret method of removing TRANSIENT_FOR
 
@@ -1411,6 +1330,7 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
   Fl_Group::current(0); // get rid of very common user bug: forgot end()
   long bgcolor=0, style = 0;
   long event_mask = XEventMask;
+  gi_window_id_t newwin;
 
   bgcolor = GI_RGB(240,240,242);
 
@@ -1472,18 +1392,29 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
   attr.bit_gravity = 0; // StaticGravity;*/
   if (win->override()) {
 	  style|=(GI_FLAGS_TEMP_WINDOW);
+	   printf("override got ################\n");
     //attr.override_redirect = 1;
     //attr.save_under = 1;
     //mask |= CWOverrideRedirect | CWSaveUnder;
   } //else attr.override_redirect = 0;
-  if (Fl::grab()) {
+  //if (Fl::grab()) {
     //attr.save_under = 1; mask |= CWSaveUnder;
-    if (!win->border()) {
-      style |= (GI_FLAGS_NON_FRAME);
-	   }//attr.override_redirect = 1; mask |= CWOverrideRedirect;
-  } 
+      //} 
+  if (!win->resizable())
+  {
+	  printf("non resize got ################\n");
+	  style |=  GI_FLAGS_NORESIZE;
+  }
 
-  if (win->modal()) style |= ( GI_FLAGS_MENU_WINDOW | GI_FLAGS_TEMP_WINDOW);
+  if (win->modal()){
+	   printf("modal got ################\n");
+	  style |= ( GI_FLAGS_MENU_WINDOW | GI_FLAGS_TEMP_WINDOW);
+  }
+  else if (!win->border()) {
+	style |= (GI_FLAGS_NON_FRAME);
+	printf("non border ################\n");
+  }//attr.override_redirect = 1; mask |= CWOverrideRedirect;
+
 
   if (fl_background_pixel >= 0) {
     //bgcolor = fl_background_pixel;
@@ -1491,7 +1422,6 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
     //mask |= CWBackPixel;
   }
 
-  gi_window_id_t newwin;
 
   if (win->menu_window() || win->tooltip_window()) {
 	  style |= (GI_FLAGS_NON_FRAME|GI_FLAGS_MENU_WINDOW);
@@ -1505,7 +1435,7 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
   Fl_X* xp =  set_xid(win, newwin);
   gi_set_events_mask(newwin, event_mask);
 
-  printf("%s: newwin=%d, root=%d\n",__FUNCTION__, newwin, root);
+  printf("%s: newwin=%d, root=%d %lx\n",__FUNCTION__, newwin, root, style);
   int showit = 1;
   int override_redirect = 0;
 
@@ -1520,6 +1450,7 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
     // send size limits and border:
     xp->sendxjunk();
 
+#if 0
     // set the class property, which controls the icon used:
     if (win->xclass()) {
       char buffer[1024];
@@ -1534,7 +1465,9 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
       gi_change_property( xp->xid, GA_WM_CLASS, GA_STRING, 8, 0,
                       (unsigned char *)buffer, p-buffer-1);
     }
+#endif
 
+#if 0
     if (win->non_modal() && xp->next && !fl_disable_transient_for) {
       // find some other window to be "transient for":
       Fl_Window* wp = xp->next->w;
@@ -1550,6 +1483,7 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
       gi_change_property( xp->xid, net_wm_state, GA_ATOM, 32,
           G_PROP_MODE_Append, (unsigned char*) &net_wm_state_skip_taskbar, 1);
     }
+#endif
 
     // Make it receptive to DnD:
     long version = 4;
@@ -1576,14 +1510,15 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
     //free(hints);
   }
 
+#if 0
   // set the window type for menu and tooltip windows to avoid animations (compiz)
   if (win->menu_window() || win->tooltip_window()) {
     gi_atom_id_t net_wm_type = gi_intern_atom( "_NET_WM_WINDOW_TYPE", FALSE);
     gi_atom_id_t net_wm_type_kind = gi_intern_atom( "_NET_WM_WINDOW_TYPE_MENU", FALSE);
     gi_change_property( xp->xid, net_wm_type, GA_ATOM, 32, G_PROP_MODE_Replace, (unsigned char*)&net_wm_type_kind, 1);
   }
+#endif
 
-  //gi_show_window( xp->xid);
    XMapWindow(fl_display, xp->xid); 
   if (showit) {
     win->set_visible();
@@ -1655,15 +1590,10 @@ void Fl_Window::label(const char *name,const char *iname) {
   iconlabel_ = iname;
   if (shown() && !parent()) {
     if (!name) name = "";
-    int namelen = strlen(name);
     if (!iname) iname = fl_filename_name(name);
-    int inamelen = strlen(iname);
 	gi_set_window_utf8_caption(i->xid, name);
-    //gi_change_property( i->xid, fl_NET_WM_NAME,      fl_XaUtf8String, 8, 0, (uchar*)name,  namelen);	// utf8
-    //gi_change_property( i->xid, GA_WM_NAME,          GA_STRING,       8, 0, (uchar*)name,  namelen);	// non-utf8
-    //gi_change_property( i->xid, fl_NET_WM_ICON_NAME, fl_XaUtf8String, 8, 0, (uchar*)iname, inamelen);	// utf8
-    //gi_change_property( i->xid, GA_WM_ICON_NAME,     GA_STRING,       8, 0, (uchar*)iname, inamelen);	// non-utf8
-  }
+	gi_set_window_icon_name(i->xid, iname);
+    }
 }
 
 ////////////////////////////////////////////////////////////////
@@ -1739,7 +1669,7 @@ static void decorated_win_size(Fl_Window *win, int &w, int &h)
   w = win->w();
   h = win->h();
   if (!win->shown() || win->parent() || !win->border() || !win->visible()) return;
-  gi_window_id_t root, parent, *children;
+  gi_window_id_t root = GI_DESKTOP_WINDOW_ID, parent, *children;
   int n = 0;
   int status = gi_query_child_tree( Fl_X::i(win)->xid,  &parent, &children, &n); 
   if (status != 0 && n) free(children);
@@ -1776,7 +1706,7 @@ void Fl_Paged_Device::print_window(Fl_Window *win, int x_offset, int y_offset)
   win->show();
   Fl::check();
   win->make_current();
-  gi_window_id_t root, parent, *children, child_win, from;
+  gi_window_id_t root = GI_DESKTOP_WINDOW_ID, parent, *children, child_win, from;
   int n = 0;
   int bx, bt, do_it;
   from = fl_window;

@@ -174,7 +174,13 @@ public:
 };
 
 #define XDestroyWindow(a,b) gi_destroy_window(b)
-#define XMapWindow(a,b) gi_show_window(b)
+//#define XMapWindow(a,b) gi_show_window(b)
+#define XMapWindow(a,b) do{\
+		printf("%s: show window got line %d\n",__FUNCTION__,__LINE__);\
+		gi_show_window(b);\
+	}\
+	while (0)
+
 #define XUnmapWindow(a,b) gi_hide_window(b)
 typedef gi_cliprect_t XRectangle;
 

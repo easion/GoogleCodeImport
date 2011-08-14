@@ -31,6 +31,7 @@
 /** \fn Fl_Bitmap::Fl_Bitmap(const unsigned char *array, int W, int H)
   The constructors create a new bitmap from the specified bitmap data.*/
 
+#include <config.h>
 #include <FL/Fl.H>
 #include <FL/x.H>
 #include <FL/fl_draw.H>
@@ -162,8 +163,15 @@ void fl_delete_bitmask(Fl_Bitmask bm) {
 
  
 Fl_Bitmask fl_create_bitmask(int w, int h, const uchar *data) {
-  Fl_Bitmask bm = 0; //FIXME DPP
-  bm = (Fl_Bitmask)gi_create_bitmap_from_data( (char *)data,
+  Fl_Bitmask bm = (Fl_Bitmask)malloc(sizeof(struct _Fl_Bitmask)); //FIXME DPP
+  if (!bm)
+  {
+	  return NULL;
+  }
+  bm->image = gi_create_bitmap_from_data( (char *)data,
+                               (w+7)&-8, h);
+
+  bm->region = gi_create_region_from_bitmap((char *)data,
                                (w+7)&-8, h);
 
   fprintf(stderr, "fl_create_bitmask calling ...\n");
@@ -173,7 +181,9 @@ Fl_Bitmask fl_create_bitmask(int w, int h, const uchar *data) {
 void fl_delete_bitmask(Fl_Bitmask bm) {
   fprintf(stderr, "fl_create_bitmask calling ...\n");
   //fl_delete_offscreen((Fl_Offscreen)bm);
-  gi_destroy_image((gi_image_t*)bm);
+  gi_destroy_image((gi_image_t*)bm->image);
+  XDestroyRegion((gi_region_ptr_t)bm->region);
+  free(bm);
 }
 
 
@@ -316,8 +326,9 @@ void Fl_Xlib_Graphics_Driver::draw(Fl_Bitmap *bm, int XP, int YP, int WP, int HP
   if (start(bm, XP, YP, WP, HP, bm->w(), bm->h(), cx, cy, X, Y, W, H)) {
     return;
   }
-  if (!bm->id_) bm->id_ = fl_create_bitmask(bm->w(), bm->h(), bm->array);
+
   fprintf(stderr, "Fl_Xlib_Graphics_Driver::draw calling ...\n");
+  if (!bm->id_) bm->id_ = fl_create_bitmask(bm->w(), bm->h(), bm->array);
   
   //XSetStipple( fl_gc, bm->id_); //fixme dpp
   int ox = X-cx; if (ox < 0) ox += bm->w();
@@ -325,8 +336,10 @@ void Fl_Xlib_Graphics_Driver::draw(Fl_Bitmap *bm, int XP, int YP, int WP, int HP
 
   gi_gc_attch_window(fl_gc,fl_window);
 
-  //gi_bitblt_image(fl_gc, ox, oy, W, H, (gi_image_t*)bm->id_,X, Y);
-  gi_bitblt_image(fl_gc, cx, cy, W, H, (gi_image_t*)bm->id_,X, Y);
+  Fl_Bitmask bitmask = (Fl_Bitmask)bm->id_;
+
+  //gi_bitblt_image(fl_gc, ox, oy, W, H, (gi_image_t*)bm->id_->image,X, Y);
+  gi_bitblt_image(fl_gc, cx, cy, W, H, (gi_image_t*)bitmask->image,X, Y);
 
 
 /*
@@ -445,6 +458,8 @@ Fl_Bitmap::~Fl_Bitmap() {
 void Fl_Bitmap::uncache() {
   if (id_) {
 #ifdef __APPLE_QUARTZ__
+    fl_delete_bitmask((Fl_Bitmask)id_);
+#elif defined(USE_GIX)
     fl_delete_bitmask((Fl_Bitmask)id_);
 #else
     fl_delete_bitmask((Fl_Offscreen)id_);

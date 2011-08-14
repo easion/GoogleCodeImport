@@ -102,7 +102,10 @@ int Fl::dnd() {
     gi_window_id_t new_window = 0; int new_version = 0;
     Fl_Window* new_local_window = 0;
     for (gi_window_id_t child = GI_DESKTOP_WINDOW_ID;;) {
-      gi_window_id_t root; unsigned int junk3;
+      gi_window_id_t root; 
+	  unsigned int junk3;
+
+	  //fixme dpp
       gi_query_pointer( child,  &child,
 		    &e_x_root, &e_y_root, &dest_x, &dest_y, &junk3);
       if (!child) {

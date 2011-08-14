@@ -1427,6 +1427,11 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
 	  style |= (GI_FLAGS_NON_FRAME|GI_FLAGS_MENU_WINDOW);
   }
 
+  //uchar r,g,b;
+  //get_rgb_color( fl_xpixel(fl_color()), r, g, b );
+  //get_rgb_color( fl_background_pixel, r, g, b );
+  //bgcolor = GI_RGB(r,g,b);
+
   newwin = gi_create_window( root,
                                X, Y, W, H,
                                bgcolor, // borderwidth

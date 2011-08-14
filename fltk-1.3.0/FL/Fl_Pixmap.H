@@ -65,6 +65,9 @@ class FL_EXPORT Fl_Pixmap : public Fl_Image {
 #if defined(__APPLE__) || defined(WIN32)
   void *id_; // for internal use
   void *mask_; // for internal use (mask bitmap)
+#elif defined(USE_GIX)
+  unsigned id_; // for internal use
+  void *mask_; // for internal use (mask bitmap)
 #else
   unsigned id_; // for internal use
   unsigned mask_; // for internal use (mask bitmap)

@@ -52,10 +52,12 @@ public:
   
   private:
 
-#if defined(__APPLE__) || defined(WIN32)
+
+#if defined(__APPLE__) || defined(WIN32) || defined(USE_GIX)
   /** for internal use */
   void *id_;
 #else
+#error "111"
   /** for internal use */
   unsigned id_;
 #endif // __APPLE__ || WIN32

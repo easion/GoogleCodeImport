@@ -63,6 +63,11 @@
 #    endif
 #    include "Fl_Window.H"
 #    include "Xutf8.h"
+
+#ifndef USE_GIX
+#define USE_GIX 1
+#endif
+
 // Mirror X definition of gi_region_ptr_t to Fl_Region, for portability...
 typedef gi_region_ptr_t Fl_Region;
 
@@ -112,8 +117,13 @@ extern void fl_copy_offscreen(int x, int y, int w, int h, Fl_Offscreen pixmap, i
 #    define fl_delete_offscreen(pixmap) gi_destroy_pixmap( pixmap)
 
 // Bitmap masks
-typedef ulong Fl_Bitmask;
+//typedef ulong Fl_Bitmask;
 
+typedef struct _Fl_Bitmask
+{
+	gi_image_t *image;
+	gi_region_ptr_t region;
+}*Fl_Bitmask;
 extern FL_EXPORT Fl_Bitmask fl_create_bitmask(int w, int h, const uchar *data);
 extern FL_EXPORT Fl_Bitmask fl_create_alphamask(int w, int h, int d, int ld, const uchar *data);
 extern FL_EXPORT void fl_delete_bitmask(Fl_Bitmask bm);

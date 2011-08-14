@@ -50,7 +50,8 @@ static void draw_current_rect() {
 #ifdef USE_XOR
 # if defined(USE_GIX)
   gi_set_gc_function( fl_gc, GI_MODE_XOR);
-  gi_set_gc_foreground_pixel( fl_gc, 0xffffffff);
+  gi_set_gc_foreground( fl_gc, GI_RGB(255,255,255));
+  //gi_set_gc_foreground_pixel( fl_gc, 0xffffffff);
   gi_gc_attch_window(fl_gc,fl_window);
   gi_draw_rect( fl_window, fl_gc, px, py, pw, ph);
   gi_set_gc_function( fl_gc, GI_MODE_SET);

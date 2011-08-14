@@ -548,20 +548,23 @@ void Fl_Xlib_Graphics_Driver::draw(Fl_RGB_Image *img, int XP, int YP, int WP, in
   }
   if (img->id_) {
     if (img->mask_) {
+		gi_region_t* rgn;
       // I can't figure out how to combine a mask with existing region,
       // so cut the image down to a clipped rectangle:
       int nx, ny; fl_clip_box(X,Y,W,H,nx,ny,W,H);
       cx += nx-X; X = nx;
       cy += ny-Y; Y = ny;
+
+	  rgn = ((Fl_Bitmask)img->mask_)->region;
       // make X use the bitmap as a mask:
-      //XSetClipMask(fl_display, fl_gc, img->mask_);
-	  gi_set_gc_clip_rectangles( fl_gc,  NULL, 0); //FIXME dpp
+      //XSetClipMask(fl_display, fl_gc, img->mask_); //fixme dpp
+	  gi_set_gc_clip_rectangles( fl_gc,  rgn->rects, rgn->numRects); //FIXME dpp
       int ox = X-cx; if (ox < 0) ox += img->w();
       int oy = Y-cy; if (oy < 0) oy += img->h();
       gi_gc_set_clip_origin( fl_gc, X-cx, Y-cy);
     }
     
-    fl_copy_offscreen(X, Y, W, H, img->id_, cx, cy);
+    fl_copy_offscreen(X, Y, W, H, img->id_, cx, cy); //fixme, dpp
     
     if (img->mask_) {
       // put the old clip region back

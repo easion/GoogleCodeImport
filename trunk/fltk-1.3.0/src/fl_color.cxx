@@ -125,20 +125,28 @@ Fl_XColor fl_xmap[1][256];
 #  endif
 
 void Fl_Xlib_Graphics_Driver::color(Fl_Color i) {
+  uchar r, g, b;
   if (i & 0xffffff00) {
     unsigned rgb = (unsigned)i;
+
     fl_color((uchar)(rgb >> 24), (uchar)(rgb >> 16), (uchar)(rgb >> 8));
   } else {
     Fl_Graphics_Driver::color(i);
+	unsigned c = fl_cmap[i];
+    r = c>>24;
+    g = c>>16;
+    b = c>> 8;
     if(!fl_gc) return; // don't get a default gc if current window is not yet created/valid
-    gi_set_gc_foreground_pixel( fl_gc, fl_xpixel(i));
+    //gi_set_gc_foreground_pixel( fl_gc, fl_xpixel(i));
+    gi_set_gc_foreground( fl_gc, GI_RGB(r,g,b));
   }
 }
 
 void Fl_Xlib_Graphics_Driver::color(uchar r,uchar g,uchar b) {
   Fl_Graphics_Driver::color( fl_rgb_color(r, g, b) );
   if(!fl_gc) return; // don't get a default gc if current window is not yet created/valid
-  gi_set_gc_foreground_pixel( fl_gc, fl_xpixel(r,g,b));
+  //gi_set_gc_foreground_pixel( fl_gc, fl_xpixel(r,g,b));
+  gi_set_gc_foreground( fl_gc, GI_RGB(r,g,b));
 }
 
 /** \addtogroup  fl_attributes
@@ -156,6 +164,8 @@ void Fl_Xlib_Graphics_Driver::color(uchar r,uchar g,uchar b) {
   \param[in] r,g,b color components
   \return X pixel number
 */
+
+//fixme dpp
 ulong fl_xpixel(uchar r,uchar g,uchar b) {
   if (!beenhere) figure_out_visual();
 #  if USE_COLORMAP

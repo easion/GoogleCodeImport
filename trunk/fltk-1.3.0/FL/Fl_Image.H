@@ -183,8 +183,11 @@ public:
 
   private:
 
-#if defined(__APPLE__) || defined(WIN32)
+#if defined(__APPLE__) || defined(WIN32)  
   void *id_; // for internal use
+  void *mask_; // for internal use (mask bitmap)
+#elif defined(USE_GIX)
+  unsigned id_; // for internal use
   void *mask_; // for internal use (mask bitmap)
 #else
   unsigned id_; // for internal use

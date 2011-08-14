@@ -261,8 +261,9 @@ int Fl_Xlib_Graphics_Driver::height() {
 	  return -1;
 
   myfont = font_descriptor()->font;
-  //return gi_ufont_ascent_get(myfont) + gi_ufont_descent_get(myfont);
-  return  gi_ufont_descent_get(myfont);
+
+  return gi_ufont_ascent_get(myfont) + gi_ufont_descent_get(myfont);
+  //return  gi_ufont_descent_get(myfont);
 }
 
 int Fl_Xlib_Graphics_Driver::descent() {
@@ -340,7 +341,7 @@ void Fl_Xlib_Graphics_Driver::draw(const char* c, int n, int x, int y) {
 
 	  gi_ufont_set_format(myfont, GI_RENDER_a8);
 
-	 // y-=gi_ufont_ascent_get(myfont);
+	  y-=gi_ufont_ascent_get(myfont);
 
 	  gi_gc_attch_window(fl_gc, fl_window); //bind for gc
 	  gi_ufont_draw( fl_gc,myfont,c,x,y,  n);

@@ -93,8 +93,8 @@ void fl_copy_offscreen(int x, int y, int w, int h, Fl_Offscreen pixmap, int srcx
 }
 /** @} */
 
-#if defined(USE_X11)
-
+#if defined(USE_GIX)
+#include <errno.h>
 static void fl_copy_offscreen_to_display(int x, int y, int w, int h, Fl_Offscreen pixmap, int srcx, int srcy) {
   int err;
   err = gi_gc_attch_window(fl_gc,fl_window);
@@ -105,7 +105,7 @@ static void fl_copy_offscreen_to_display(int x, int y, int w, int h, Fl_Offscree
   err = gi_copy_area( pixmap, fl_window, fl_gc, srcx, srcy, w, h, x, y);
   if (err)
   {
-	  perror("gi_copy_area#1");
+	  fprintf(stderr, "gi_copy_area#1 to %d: %s\n",fl_window, strerror(errno) );
   }
 }
 

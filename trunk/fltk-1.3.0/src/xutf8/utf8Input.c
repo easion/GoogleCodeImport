@@ -420,7 +420,6 @@ XUtf8LookupString(
 		  KeySym*             keysym,
 		  int*             status_return) {
   int len = 0;
-#if 0 //fixme dpp
   long ucs = -1;
   len = XmbLookupString(ic, event, buffer_return, bytes_buffer / 5,
 		        keysym, status_return);
@@ -450,7 +449,7 @@ XUtf8LookupString(
     if (!im) return 0;
     len = XConvertEucToUtf8(XLocaleOfIM(im), buffer_return, len, bytes_buffer);	
   }
-#endif
+
   return len;
 }
 

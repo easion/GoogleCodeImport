@@ -32,77 +32,185 @@
 #include <FL/Fl.H>
 #include <FL/x.H>
 #include <config.h>
+#include <ctype.h>
 
+extern char fl_key_vector[32]; // in Fl_x.cxx
+
+
+// convert a MSWindows G_KEY_x to an Fltk (X) Keysym:
+// See also the inverse converter in Fl_get_key_win32.cxx
+// This table is in numeric order by VK:
 static const struct {unsigned short vk, fltk;} vktab[] = {
-  { 49, ' ' }, { 39, '\'' }, { 43, ',' }, { 27, '-' }, { 47, '.' }, { 44, '/' }, 
-  { 29, '0' }, { 18, '1'  }, { 19, '2'  }, { 20, '3'  }, 
-  { 21, '4' }, { 23, '5'  }, { 22, '6'  }, { 26, '7'  }, 
-  { 28, '8' }, { 25, '9'  }, { 41, ';'  }, { 24, '='  },
-  {  0, 'A' }, { 11, 'B'  }, {  8, 'C'  }, {  2, 'D'  }, 
-  { 14, 'E' }, {  3, 'F'  }, {  5, 'G'  }, {  4, 'H'  }, 
-  { 34, 'I' }, { 38, 'J'  }, { 40, 'K'  }, { 37, 'L'  }, 
-  { 46, 'M' }, { 45, 'N'  }, { 31, 'O'  }, { 35, 'P'  }, 
-  { 12, 'Q' }, { 15, 'R'  }, {  1, 'S'  }, { 17, 'T'  }, 
-  { 32, 'U' }, {  9, 'V'  }, { 13, 'W'  }, {  7, 'X'  }, 
-  { 16, 'Y' }, {  6, 'Z'  }, 
-  { 33, '[' }, { 30, ']' }, { 50, '`' },  { 42, '\\' },
-  { 51, FL_BackSpace }, { 48, FL_Tab }, { 36, FL_Enter }, { 0x7F, FL_Pause },
-  { 0x7F, FL_Scroll_Lock }, { 53, FL_Escape }, { 0x73, FL_Home }, { 123, FL_Left },
-  { 126, FL_Up }, { 124, FL_Right }, { 125, FL_Down }, { 0x74, FL_Page_Up },
-  { 0x79, FL_Page_Down },  { 119, FL_End }, { 0x7F, FL_Print }, { 0x7F, FL_Insert },
-  { 0x6e, FL_Menu }, { 114, FL_Help }, { 0x47, FL_Num_Lock },
-  { 76, FL_KP_Enter }, { 67, FL_KP+'*' }, { 69, FL_KP+'+'}, { 78, FL_KP+'-' }, { 65, FL_KP+'.' }, { 75, FL_KP+'/' }, 
-  { 82, FL_KP+'0' }, { 83, FL_KP+'1' }, { 84, FL_KP+'2' }, { 85, FL_KP+'3' }, 
-  { 86, FL_KP+'4' }, { 87, FL_KP+'5' }, { 88, FL_KP+'6' }, { 89, FL_KP+'7' }, 
-  { 91, FL_KP+'8' }, { 92, FL_KP+'9' }, { 81, FL_KP+'=' }, 
-  { 0x7a, FL_F+1 }, { 0x78, FL_F+2  }, { 0x63, FL_F+3  }, { 0x76, FL_F+4  }, 
-  { 0x60, FL_F+5 }, { 0x61, FL_F+6  }, { 0x62, FL_F+7  }, { 0x64, FL_F+8  }, 
-  { 0x65, FL_F+9 }, { 0x6D, FL_F+10 }, { 0x67, FL_F+11 }, { 0x6f, FL_F+12 }, 
-  { 0x69, FL_F+13 }, { 0x6B, FL_F+14 }, { 0x71, FL_F+15 }, { 0x6A, FL_F+16 }, 
-  { 0x38, FL_Shift_L }, { 0x3C, FL_Shift_R }, { 0x3B, FL_Control_L }, { 0x3E, FL_Control_R }, 
-  { 0x39, FL_Caps_Lock }, { 0x37, FL_Meta_L }, { 0x36, FL_Meta_R },
-  { 0x3A, FL_Alt_L }, { 0x3D, FL_Alt_R }, { 0x75, FL_Delete },
+  {G_KEY_BACKSPACE,	FL_BackSpace},
+  {G_KEY_TAB,	FL_Tab},
+  {G_KEY_CLEAR,	FL_KP+'5'},
+  {G_KEY_RETURN,	FL_Enter},
+  {G_KEY_ENTER,	FL_Enter},
+  {G_KEY_LSHIFT,	FL_Shift_L},
+  {G_KEY_RSHIFT,		FL_Shift_R},
+  {G_KEY_LCTRL,	FL_Control_L},
+  {G_KEY_RCTRL,	FL_Control_R},
+  {G_KEY_LALT,	FL_Alt_L},
+  {G_KEY_RALT,	FL_Alt_R},
+  {G_KEY_PAUSE,	FL_Pause},
+  {G_KEY_CAPSLOCK,	FL_Caps_Lock},
+  {G_KEY_ESCAPE,	FL_Escape},
+  {G_KEY_SPACE,	' '},
+  {G_KEY_PAGEUP,	FL_Page_Up},
+  {G_KEY_PAGEDOWN,	FL_Page_Down},
+  {G_KEY_END,	FL_End},
+  {G_KEY_HOME,	FL_Home},
+  {G_KEY_LEFT,	FL_Left},
+  {G_KEY_UP,	FL_Up},
+  {G_KEY_RIGHT,	FL_Right},
+  {G_KEY_DOWN,	FL_Down},
+  {G_KEY_PRINT,	FL_Print},	// does not work on NT
+  {G_KEY_INSERT,	FL_Insert},
+  {G_KEY_DELETE,	FL_Delete},
+  {G_KEY_LMETA,	FL_Meta_L},
+  {G_KEY_RMETA,	FL_Meta_R},
+  {G_KEY_MENU,	FL_Menu},
+  //{G_KEY_SLEEP, FL_Sleep},
+  {G_KEY_ASTERISK,	FL_KP+'*'},
+  {G_KEY_PLUS,	FL_KP+'+'},
+  {G_KEY_MINUS,	FL_KP+'-'},
+  {G_KEY_PERIOD,	FL_KP+'.'},
+  {G_KEY_SLASH,	FL_KP+'/'},
+  {G_KEY_NUMLOCK,	FL_Num_Lock},
+  {G_KEY_SCROLLOCK,	FL_Scroll_Lock},
+/*
+# if defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0500)
+  {G_KEY_BROWSER_BACK, FL_Back},
+  {G_KEY_BROWSER_FORWARD, FL_Forward},
+  {G_KEY_BROWSER_REFRESH, FL_Refresh},
+  {G_KEY_BROWSER_STOP, FL_Stop},
+  {G_KEY_BROWSER_SEARCH, FL_Search},
+  {G_KEY_BROWSER_FAVORITES, FL_Favorites},
+  {G_KEY_BROWSER_HOME, FL_Home_Page},
+  {G_KEY_VOLUME_MUTE, FL_Volume_Mute},
+  {G_KEY_VOLUME_DOWN, FL_Volume_Down},
+  {G_KEY_VOLUME_UP, FL_Volume_Up},
+  {G_KEY_MEDIA_NEXT_TRACK, FL_Media_Next},
+  {G_KEY_MEDIA_PREV_TRACK, FL_Media_Prev},
+  {G_KEY_MEDIA_STOP, FL_Media_Stop},
+  {G_KEY_MEDIA_PLAY_PAUSE, FL_Media_Play},
+  {G_KEY_LAUNCH_MAIL, FL_Mail},
+#endif
+  {0xba,	';'},
+  {0xbb,	'='},
+  {0xbc,	','},
+  {0xbd,	'-'},
+  {0xbe,	'.'},
+  {0xbf,	'/'},
+  {0xc0,	'`'},
+  {0xdb,	'['},
+  {0xdc,	'\\'},
+  {0xdd,	']'},
+  {0xde,	'\''}
+*/
 };
 
-static int fltk2mac(int fltk) {
-  int a = 0;
-  int b = sizeof(vktab)/sizeof(*vktab);
-  while (a < b) {
-    int c = (a+b)/2;
-    if (vktab[c].fltk == fltk) return vktab[c].vk;
-    if (vktab[c].fltk < fltk) a = c+1; else b = c;
+static unsigned short vklut[G_KEY_LAST]={0,};
+
+int fltk2gix(int flkey) 
+{
+  if (!vklut[1]) { // init the table
+    int i;
+    for (i = 0; i < 256; i++) vklut[i] = tolower(i);
+    for (i=G_KEY_F1; i<=G_KEY_F15; i++) 
+		vklut[i] = i+(FL_F-(G_KEY_F1-1));
+    for (i=G_KEY_KP0; i<=G_KEY_KP9; i++) 
+		vklut[i] = i+(FL_KP+'0'-G_KEY_KP0);
+    for (i = 0; i < sizeof(vktab)/sizeof(*vktab); i++) {
+      vklut[vktab[i].vk] = vktab[i].fltk;
+    }
+    
   }
-  return 127;
-}
 
-//: returns true, if that key was pressed during the last event
-int Fl::event_key(int k) {
-  return get_key(k);
-}
-
-//fixme dpp
-//: returns true, if that key is pressed right now
-int Fl::get_key(int k) {
-
+  int i;
+  for (i=0; i<G_KEY_LAST; i++)
   {
-  typedef uint32_t fl_KeyMap[4];
-  fl_KeyMap foo;
-  /*// use the GetKeys Carbon function
-  typedef void (*keymap_f)(fl_KeyMap);
-  static keymap_f f = NULL;
-  if (!f) f = ( keymap_f )Fl_X::get_carbon_function("GetKeys");
-  (*f)(foo);*/
-
-  unsigned char *b = (unsigned char*)foo;
-  // KP_Enter can be at different locations for Powerbooks vs. desktop Macs
-  if (k==FL_KP_Enter) {
-    return (((b[0x34>>3]>>(0x34&7))&1)||((b[0x4c>>3]>>(0x4c&7))&1));
+	  if (vklut[i] == flkey)
+	  {
+		  return i;
+	  }
   }
-  int i = fltk2mac(k);
-  return (b[i>>3]>>(i&7))&1;
-  }
+  return 0;
 }
 
-//
-// End of "$Id: Fl_get_key_mac.cxx 8624 2011-04-26 17:28:10Z manolo $".
-//
+int gix2fltk(int vk) 
+{
+  //static unsigned short extendedlut[256];
+
+  if (!vklut[1]) { // init the table
+    int i;
+    for (i = 0; i < 256; i++) vklut[i] = tolower(i);
+    for (i=G_KEY_F1; i<=G_KEY_F15; i++) 
+		vklut[i] = i+(FL_F-(G_KEY_F1-1));
+    for (i=G_KEY_KP0; i<=G_KEY_KP9; i++) 
+		vklut[i] = i+(FL_KP+'0'-G_KEY_KP0);
+    for (i = 0; i < sizeof(vktab)/sizeof(*vktab); i++) {
+      vklut[vktab[i].vk] = vktab[i].fltk;
+      //extendedlut[vktab[i].vk] = vktab[i].extended;
+    }
+    //for (i = 0; i < 256; i++) 
+	//	if (!extendedlut[i]) extendedlut[i] = vklut[i];
+  }
+  return vklut[vk];
+}
+
+
+/*
+int
+XKeysymToKeycode( KeySym ks)
+{
+	DFBInputDeviceKeymapEntry entry;
+	IDirectFBInputDevice* kbd = 0;
+	int code = 0, id = fltk2id(ks);
+	fl_dfb->GetInputDevice(fl_dfb, keyboard_id, &kbd);
+	for (int i = 0; i < 255; i++) {
+		kbd->GetKeymapEntry(kbd, i, &entry);
+		if (id != 0){
+			if (entry.identifier==id) {
+				code = entry.code;
+				break;
+			}
+		} else {
+			for (int j = 0; j <= DIKSI_LAST; j++) {
+				if (entry.symbols[j] == (int)ks) {
+					code = entry.code;
+					break;
+				}
+			}
+		}
+	}
+	release(kbd);
+	return code; 
+}
+
+*/
+
+int Fl::event_key(int k) {
+  if (k > FL_Button && k <= FL_Button+8)
+    return Fl::event_state(8<<(k-FL_Button));
+  int i;
+
+    i = fltk2gix( k);
+  if (i==0) return 0;
+  return fl_key_vector[i/8] & (1 << (i%8));
+}
+
+
+int
+XQueryKeymap( char s[32])
+{
+    return 0;
+} 
+
+
+int Fl::get_key(int k) {
+  fl_open_display();
+  XQueryKeymap( fl_key_vector);
+  return event_key(k);
+}
+

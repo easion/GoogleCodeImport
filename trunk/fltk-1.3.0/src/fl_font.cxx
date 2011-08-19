@@ -59,6 +59,7 @@
 #elif defined(__APPLE__)
 #  include "fl_font_mac.cxx"
 #elif defined(USE_GIX)
+
 #  include "fl_font_gix.cxx"
 #elif USE_XFT
 #  include "fl_font_xft.cxx"

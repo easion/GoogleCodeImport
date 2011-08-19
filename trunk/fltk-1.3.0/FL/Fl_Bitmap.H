@@ -57,7 +57,6 @@ public:
   /** for internal use */
   void *id_;
 #else
-#error "111"
   /** for internal use */
   unsigned id_;
 #endif // __APPLE__ || WIN32

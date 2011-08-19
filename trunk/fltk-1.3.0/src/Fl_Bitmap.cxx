@@ -171,8 +171,8 @@ Fl_Bitmask fl_create_bitmask(int w, int h, const uchar *data) {
   bm->image = gi_create_bitmap_from_data( (char *)data,
                                (w+7)&-8, h);
 
-  bm->region = gi_create_region_from_bitmap((char *)data,
-                               (w+7)&-8, h);
+  bm->region = gi_create_region_from_bitmap_pitch((char *)bm->image->rgba,
+                               (w+7)&-8, h, bm->image->pitch);
 
   fprintf(stderr, "fl_create_bitmask calling ...\n");
   return bm;

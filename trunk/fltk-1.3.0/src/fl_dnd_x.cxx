@@ -101,34 +101,55 @@ int Fl::dnd() {
     // figure out what window we are pointing at:
     gi_window_id_t new_window = 0; int new_version = 0;
     Fl_Window* new_local_window = 0;
-    for (gi_window_id_t child = GI_DESKTOP_WINDOW_ID;;) {
-      gi_window_id_t root; 
+	gi_window_id_t child = 0;
+	int err;
+
+    for (child = GI_DESKTOP_WINDOW_ID;;) {
+      gi_window_id_t root= GI_DESKTOP_WINDOW_ID; 
 	  unsigned int junk3;
 
+	  child = GI_DESKTOP_WINDOW_ID;
+
 	  //fixme dpp
-      gi_query_pointer( child,  &child,
+      err = gi_query_pointer( root,  &child,
 		    &e_x_root, &e_y_root, &dest_x, &dest_y, &junk3);
+	  if (err < 0)
+	  {
+	  printf("line %d: dnd go loop fail (%d,%d)\n",__LINE__,  e_x_root,e_y_root);
+	  }
+
       if (!child) {
 	if (!new_window && (new_version = dnd_aware(root))) new_window = root;
 	break;
       }
+
       new_window = child;
       if ((new_local_window = fl_find(child))) break;
       if ((new_version = dnd_aware(new_window))) break;
-    }
+
+	  printf("line %d: dnd child %d go loop (%d,%d)\n",__LINE__, child, e_x_root,e_y_root);
+
+	  usleep(100000);
+    }//end loop
+
+	printf("line %d: dnd child %d exit\n",__LINE__, child);
 
     if (new_window != target_window) {
+
       if (local_window) {
 	local_handle(FL_DND_LEAVE, local_window);
       } else if (dndversion) {
 	fl_sendClientMessage(target_window, fl_XdndLeave, source_window);
       }
+
       dndversion = new_version;
       target_window = new_window;
       local_window = new_local_window;
+
       if (local_window) {
 	local_handle(FL_DND_ENTER, local_window);
       } else if (dndversion) {
+
         // Send an X-DND message to the target window.  In order to
 	// support dragging of files/URLs as well as arbitrary text,
 	// we look at the selection buffer - if the buffer starts
@@ -155,8 +176,11 @@ int Fl::dnd() {
 	  fl_sendClientMessage(target_window, fl_XdndEnter, source_window,
 			       dndversion<<24, fl_XaUtf8String, 0, 0);
 	}
-      }
-    }
+
+      } //dnd version
+
+    } //new window not target window
+
     if (local_window) {
       local_handle(FL_DND_DRAG, local_window);
     } else if (dndversion) {
@@ -164,8 +188,10 @@ int Fl::dnd() {
 			   0, (e_x_root<<16)|e_y_root, fl_event_time,
 			   fl_XdndActionCopy);
     }
+
+	printf("line %d: dnd got wait\n",__LINE__);
     Fl::wait();
-  }
+  } //end of pushed
 
   if (local_window) {
     fl_i_own_selection[0] = 1;
@@ -197,6 +223,7 @@ int Fl::dnd() {
 
   fl_local_grab = 0;
   source_fl_win->cursor(FL_CURSOR_DEFAULT);
+  printf("line %d: dnd got out",__LINE__);
   return 1;
 }
 

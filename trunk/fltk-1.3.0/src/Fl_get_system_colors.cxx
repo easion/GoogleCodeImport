@@ -211,7 +211,6 @@ static void
 getsyscolor(const char *key1, const char* key2, const char *arg, const char *defarg, void (*func)(uchar,uchar,uchar))
 {
   if (!arg) {
-    //arg = XGetDefault(fl_display, key1, key2);
     if (!arg) arg = defarg;
   }
   gi_color_t x;
@@ -229,8 +228,10 @@ void Fl::get_system_colors()
   if (!key1) key1 = "fltk";
   if (!fl_bg2_set) getsyscolor("Text","background",	fl_bg2,	"#ffffff", Fl::background2);
   if (!fl_fg_set) getsyscolor(key1,  "foreground",	fl_fg,	"#000000", Fl::foreground);
-  if (!fl_bg_set) getsyscolor(key1,  "background",	fl_bg,	"#c0c0c0", Fl::background);
-  getsyscolor("Text", "selectBackground", 0, "#000080", set_selection_color);
+  //if (!fl_bg_set) getsyscolor(key1,  "background",	fl_bg,	"#f0f0f2", Fl::background);
+
+  if (!fl_bg_set) getsyscolor(key1,  "background",	fl_bg,	"#ece9d8", Fl::background);
+  getsyscolor("Text", "selectBackground", 0, "#3399ff", set_selection_color);
 }
 
 

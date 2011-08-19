@@ -36,10 +36,20 @@ Fl_Font_Descriptor::Fl_Font_Descriptor(const char* name, Fl_Fontsize size) {
  
   font = gi_create_ufont( buf);
   if (!font) {
+	  char *_font =NULL;
+	  _font = getenv("FLTK_FONT");
+	  if (!_font)
+	  {
+		  _font = "simsun";
+	  }
     Fl::warning("bad font: %s %d", name, size);
-	snprintf(buf,256,"gbk/%d", size-2);
+	snprintf(buf,256,"%s/%d",_font, size-2);
 	//snprintf(buf,256,"Vera/%d", size);
     font = gi_create_ufont(buf);
+	if (font)
+	{
+		gi_ufont_set_format(font, GI_RENDER_a8);
+	}
 	//gi_ufont_set_size(font, 10);
   }
 
@@ -257,18 +267,30 @@ void Fl_Xlib_Graphics_Driver::font(Fl_Font fnum, Fl_Fontsize size) {
 
 int Fl_Xlib_Graphics_Driver::height() {
   gi_ufont_t *myfont;
+  int h = 0;
   if (!font_descriptor())
 	  return -1;
 
   myfont = font_descriptor()->font;
+  h = gi_ufont_ascent_get(myfont) + gi_ufont_descent_get(myfont);
 
-  return gi_ufont_ascent_get(myfont) + gi_ufont_descent_get(myfont);
-  //return  gi_ufont_descent_get(myfont);
+  //printf("D/A : %d,%d\n", gi_ufont_ascent_get(myfont) , gi_ufont_descent_get(myfont));
+
+  return h;
 }
 
+
 int Fl_Xlib_Graphics_Driver::descent() {
-  if (font_descriptor()) return gi_ufont_descent_get(font_descriptor()->font);
-  else return -1;
+   gi_ufont_t *myfont;
+  int pad = 0;
+
+  if (!font_descriptor())
+	  return -1;
+
+  myfont = font_descriptor()->font;
+  pad = gi_ufont_ascent_get(myfont);
+  
+  return pad + gi_ufont_descent_get(myfont);
 }
 
 double Fl_Xlib_Graphics_Driver::width(const char* c, int n) {
@@ -307,15 +329,11 @@ void Fl_Xlib_Graphics_Driver::text_extents(const char *c, int n, int &dx, int &d
   if (font_gc != fl_gc) {
     if (!font_descriptor()) font(FL_HELVETICA, FL_NORMAL_SIZE);
     font_gc = fl_gc;
-    //XSetFont(fl_display, fl_gc, font_descriptor()->font->fid);
   }
   int xx, yy, ww, hh;
   xx = yy = ww = hh = 0;
 
   gi_ufont_param(font_descriptor()->font,c,n, &ww, &hh);
-
-  //if (fl_gc) XUtf8_measure_extents(fl_display, fl_window, 
-  //font_descriptor()->font, fl_gc, &xx, &yy, &ww, &hh, c, n);
 
   W = ww; H = hh; dx = xx; dy = yy;
 
@@ -327,26 +345,23 @@ void Fl_Xlib_Graphics_Driver::draw(const char* c, int n, int x, int y) {
   if (font_gc != fl_gc) {
     if (!font_descriptor()) this->font(FL_HELVETICA, FL_NORMAL_SIZE);
     font_gc = fl_gc;
-    //XSetFont(fl_display, fl_gc, font_descriptor()->font->fid);
   }
 
   //if (!font_descriptor())
-	//  return -1;
+	//  return ;
 
   myfont = font_descriptor()->font;
 
   if (fl_gc){
-	  unsigned char R=0,G=255,B=0;
-	  gi_ufont_set_text_attr(fl_gc,myfont,FALSE,GI_RGB(R,G,B),0);
+	 
+	  //y -= gi_ufont_ascent_get(myfont);
 
-	  gi_ufont_set_format(myfont, GI_RENDER_a8);
-
-	  y-=gi_ufont_ascent_get(myfont);
+	  //gi_ufont_set_format(myfont, GI_RENDER_a8);
 
 	  gi_gc_attch_window(fl_gc, fl_window); //bind for gc
 	  gi_ufont_draw( fl_gc,myfont,c,x,y,  n);
   }
-  //if (fl_gc) XUtf8DrawString(fl_display, fl_window, myfont, fl_gc, x, y, c, n);
+
 }
 
 void Fl_Xlib_Graphics_Driver::draw(int angle, const char *str, int n, int x, int y) {
@@ -359,7 +374,7 @@ void Fl_Xlib_Graphics_Driver::rtl_draw(const char* c, int n, int x, int y) {
     if (!font_descriptor()) this->font(FL_HELVETICA, FL_NORMAL_SIZE);
     font_gc = fl_gc;
   }
-  //if (fl_gc) XUtf8DrawRtlString(fl_display, fl_window, myfont, fl_gc, x, y, c, n);
+
 }
 #endif // FL_DOXYGEN
 

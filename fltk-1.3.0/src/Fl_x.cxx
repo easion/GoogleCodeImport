@@ -532,7 +532,11 @@ void Fl::get_mouse(int &xx, int &yy) {
   gi_window_id_t c; 
   int mx,my,cx,cy; 
   unsigned int mask;
-  gi_query_pointer(root, &c,&mx,&my,&cx,&cy,&mask);
+  int err;
+  err = gi_query_pointer(root, &c,&mx,&my,&cx,&cy,&mask);
+  if (err < 0)
+  {
+  }
   xx = mx;
   yy = my;
 }
@@ -1049,9 +1053,7 @@ int fl_handle(const gi_msg_t& thisevent)
 
   case GI_MSG_KEY_DOWN:
   case GI_MSG_KEY_UP: {
-	  ulong state;
-
-	  
+	  ulong state;	  
 
   //KEYPRESS:
     int keycode = xevent.params[3];
@@ -1079,6 +1081,7 @@ int fl_handle(const gi_msg_t& thisevent)
 		}
 		else
 		 {
+			gi_set_focus_window(xevent.ev_window);
 			Fl::e_keysym = Fl::e_original_keysym = gix2fltk(keycode);
 			buffer[0] = keycode;
 			len = 1;        
@@ -1104,7 +1107,6 @@ int fl_handle(const gi_msg_t& thisevent)
       fl_key_vector[keycode/8] &= ~(1 << (keycode%8));
 
 	  Fl::e_state = state;
-	  gi_set_focus_window(xevent.ev_window);
       // keyup events just get the unshifted keysym:
     }
 
@@ -1209,6 +1211,11 @@ int fl_handle(const gi_msg_t& thisevent)
   case GI_MSG_CONFIGURENOTIFY: {
     if (window->parent()) break; // ignore child windows
 
+	if (xevent.params[0] > GI_STRUCT_CHANGE_RESIZE )
+	{
+	break;
+	}
+
     // figure out where OS really put window
     gi_window_info_t actual;
     gi_get_window_info( fl_xid(window), &actual);
@@ -1216,6 +1223,8 @@ int fl_handle(const gi_msg_t& thisevent)
     gi_translate_coordinates( fl_xid(window), GI_DESKTOP_WINDOW_ID,
                           0, 0, &X, &Y, &cr);
 
+	//printf("CONFIGURENOTIFY: got line %d (%d,%d %d,%d)\n",__LINE__,
+	//	X,Y, xevent.body.rect.x, xevent.body.rect.y);
     // tell Fl_Window about it and set flag to prevent echoing:
     resize_bug_fix = window;
     window->resize(X, Y, W, H);

@@ -131,29 +131,22 @@ void Fl_Window::cursor(Fl_Cursor c, Fl_Color c1, Fl_Color c2) {
   if (!shown()) return;
   int n = GI_CURSOR_ARROW;
   // the cursor must be set for the top level window, not for subwindows
-  //Fl_Window *w = window(), *toplevel = this;
-  //while (w) { toplevel = w; w = w->window(); }
-  //if (toplevel != this) { toplevel->cursor(c, c1, c2); return; }
+  Fl_Window *w = window(), *toplevel = this;
+  while (w) { toplevel = w; w = w->window(); }
+  if (toplevel != this) { toplevel->cursor(c, c1, c2); return; }
 
-
-  // now set the actual cursor
- 
-  if (c > GI_CURSOR_MAX) {
-    n = GI_CURSOR_ARROW;
-  } else if (c == FL_CURSOR_DEFAULT) {
+  // now set the actual cursor 
+  
+  if (c == FL_CURSOR_DEFAULT) {
     n = GI_CURSOR_ARROW;
   } else {
-    //LPSTR n;
     switch (c) {
     case FL_CURSOR_ARROW:	n = GI_CURSOR_ARROW; break;
     case FL_CURSOR_CROSS:	n = GI_CURSOR_CROSS; break;
     case FL_CURSOR_WAIT:	n = GI_CURSOR_WAIT; break;
     case FL_CURSOR_INSERT:	n = GI_CURSOR_IBEAM; break;
     case FL_CURSOR_HELP:	n = GI_CURSOR_HELP; break;
-    case FL_CURSOR_HAND: {
-           n = GI_CURSOR_HAND;
-          //else n = GI_CURSOR_UPARROW;
-	} break;
+    case FL_CURSOR_HAND: {  n = GI_CURSOR_HAND;} break;
     case FL_CURSOR_MOVE:	n = GI_CURSOR_SIZEALL; break;
     case FL_CURSOR_N:
     case FL_CURSOR_S:
@@ -169,7 +162,7 @@ void Fl_Window::cursor(Fl_Cursor c, Fl_Color c1, Fl_Color c2) {
     case FL_CURSOR_NWSE:	n = GI_CURSOR_SIZENWSE; break;
     default:			n = GI_CURSOR_NO; break;
     }
-    //i->cursor = ( n);
+
   }
   gi_load_cursor(fl_xid(this), n);
 }

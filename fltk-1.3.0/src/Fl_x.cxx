@@ -186,10 +186,7 @@ extern Fl_Window* fl_xmousewin;
 static bool in_a_window; // true if in any of our windows, even destroyed ones
 static void do_queued_events(int n) {
   int err;
-  //int n;
   in_a_window = true;
-  //while (XEventsQueued(fl_display,QueuedAfterReading))
-
   
   while (n>0)
 	{
@@ -261,7 +258,6 @@ int fl_wait(double time_to_wait) {
   if (n > 0) {
     for (int i=0; i<nfds; i++) {
 #  if USE_POLL
-#error "use poll"
       if (pollfds[i].revents) fd[i].cb(pollfds[i].fd, fd[i].arg);
 #  else
       int f = fd[i].fd;
@@ -315,14 +311,9 @@ gi_window_id_t fl_message_window = 0;
 int fl_screen;
 gi_screen_info_t *fl_visual;
 //Colormap fl_colormap;
-//XIM fl_xim_im = 0;
-//XIC fl_xim_ic = 0;
-char fl_is_over_the_spot = 0;
-//static XRectangle status_area;
 
-//static gi_atom_id_t WM_DELETE_WINDOW;
-static gi_atom_id_t WM_PROTOCOLS;
-static gi_atom_id_t fl_MOTIF_WM_HINTS;
+char fl_is_over_the_spot = 0;
+
 static gi_atom_id_t TARGETS;
 static gi_atom_id_t CLIPBOARD;
 gi_atom_id_t fl_XdndAware;
@@ -341,10 +332,7 @@ gi_atom_id_t fl_Xatextplainutf;
 gi_atom_id_t fl_Xatextplain;
 static gi_atom_id_t fl_XaText;
 gi_atom_id_t fl_XaCompoundText;
-gi_atom_id_t fl_XaUtf8String;
 gi_atom_id_t fl_XaTextUriList;
-gi_atom_id_t fl_NET_WM_NAME;			// utf8 aware window label
-gi_atom_id_t fl_NET_WM_ICON_NAME;		// utf8 aware window icon name
 
 /*
   X defines 32-bit-entities to have a format value of max. 32,
@@ -361,21 +349,14 @@ static void fd_callback(int,void *) {
 
 extern char *fl_get_font_xfld(int fnum, int size);
 
-void fl_new_ic()
-{
-  
-}
-
 
 static XRectangle    spot;
-//static int spotf = -1;
-//static int spots = -1;
+
 
 void fl_reset_spot(void)
 {
   spot.x = -1;
   spot.y = -1;
-  //if (fl_xim_ic) XUnsetICFocus(fl_xim_ic);
 }
 
 void fl_set_spot(int font, int size, int X, int Y, int W, int H, Fl_Window *win)
@@ -394,9 +375,6 @@ void fl_set_status(int x, int y, int w, int h)
   
 }
 
-void fl_init_xim() {
- 
-}
 
 void fl_open_display(void) {
   if (fl_display) return;
@@ -407,12 +385,10 @@ void fl_open_display(void) {
   FD_ZERO(&fdsets[1]);
   FD_ZERO(&fdsets[2]);
   maxfd = 0;
-
   //memset(fdsets,0,sizeof(fdsets));
  
   int d = gi_init();
   if (d<0) Fl::fatal("Can't open display");
-
  
   fl_open_display(1);
 }
@@ -421,8 +397,8 @@ void fl_open_display(int d) {
   fl_display = d;
 
   //WM_DELETE_WINDOW      = gi_intern_atom( "WM_DELETE_WINDOW",    0);
-  WM_PROTOCOLS          = gi_intern_atom( "WM_PROTOCOLS",        0);
-  fl_MOTIF_WM_HINTS     = gi_intern_atom( "_MOTIF_WM_HINTS",     0);
+  //WM_PROTOCOLS          = gi_intern_atom( "WM_PROTOCOLS",        0);
+  //fl_MOTIF_WM_HINTS     = gi_intern_atom( "_MOTIF_WM_HINTS",     0);
   TARGETS               = gi_intern_atom( "TARGETS",             0);
   CLIPBOARD             = gi_intern_atom( "CLIPBOARD",           0);
   fl_XdndAware          = gi_intern_atom( "XdndAware",           0);
@@ -442,17 +418,12 @@ void fl_open_display(int d) {
   fl_Xatextplain        = gi_intern_atom( "text/plain",          0);
   fl_XaText             = gi_intern_atom( "TEXT",                0);
   fl_XaCompoundText     = gi_intern_atom( "COMPOUND_TEXT",       0);
-  fl_XaUtf8String       = gi_intern_atom( "UTF8_STRING",         0);
   fl_XaTextUriList      = gi_intern_atom( "text/uri-list",       0);
-  fl_NET_WM_NAME        = gi_intern_atom( "_NET_WM_NAME",        0);
-  fl_NET_WM_ICON_NAME   = gi_intern_atom( "_NET_WM_ICON_NAME",   0);
 
   if (sizeof(gi_atom_id_t) < 4)
     atom_bits = sizeof(gi_atom_id_t) * 8;
 
   Fl::add_fd(gi_get_connection_fd(), POLLIN, fd_callback);
-
-  //fl_screen = DefaultScreen(d);
 
   fl_message_window =
     gi_create_window( GI_DESKTOP_WINDOW_ID, 0,0,1,1,0, GI_FLAGS_NON_FRAME);
@@ -462,7 +433,6 @@ void fl_open_display(int d) {
   fl_visual = (gi_screen_info_t *)malloc(sizeof(gi_screen_info_t));
   gi_get_screen_info(fl_visual);
   //fl_colormap = DefaultColormap(d, fl_screen);
-  fl_init_xim();
 
 #if !USE_COLORMAP
   Fl::visual(FL_RGB);
@@ -479,7 +449,7 @@ static int fl_workarea_xywh[4] = { -1, -1, -1, -1 };
 static void fl_init_workarea() {
   fl_open_display();
 
-  gi_atom_id_t _NET_WORKAREA = gi_intern_atom( "_NET_WORKAREA", 0);
+  gi_atom_id_t _NET_WORKAREA = gi_intern_atom( "_WM_MAXIMIZE_COORD", 0);
   gi_atom_id_t actual;
   unsigned long count, remaining;
   int format;
@@ -751,7 +721,7 @@ int fl_handle(const gi_msg_t& thisevent)
 	  gi_atom_id_t t = ((gi_atom_id_t*)portion)[i];
 	    if (t == fl_Xatextplainutf ||
 		  t == fl_Xatextplain ||
-		  t == fl_XaUtf8String) {type = t; break;}
+		  t == GA_UTF8_STRING) {type = t; break;}
 	    // rest are only used if no utf-8 available:
 	    if (t == fl_XaText ||
 		  t == fl_XaTextUriList ||
@@ -814,11 +784,11 @@ int fl_handle(const gi_msg_t& thisevent)
     gi_message_notify_selection_time(&e) = gi_message_request_selection_time(fl_xevent);
     gi_message_notify_selection_property(&e) = gi_message_request_selection_property(fl_xevent);
     if (gi_message_notify_selection_target(&e) == TARGETS) {
-      gi_atom_id_t a[3] = {fl_XaUtf8String, GA_STRING, fl_XaText};
+      gi_atom_id_t a[3] = {GA_UTF8_STRING, GA_STRING, fl_XaText};
       gi_change_property( gi_message_notify_selection_requestor(&e), gi_message_notify_selection_property(&e),
                       GA_ATOM, atom_bits, 0, (unsigned char*)a, 3);
     } else if (/*gi_message_notify_selection_target(&e) == GA_STRING &&*/ fl_selection_length[clipboard]) {
-    if (gi_message_notify_selection_target(&e) == fl_XaUtf8String ||
+    if (gi_message_notify_selection_target(&e) == GA_UTF8_STRING ||
 	     gi_message_notify_selection_target(&e) == GA_STRING ||
 	     gi_message_notify_selection_target(&e) == fl_XaCompoundText ||
 	     gi_message_notify_selection_target(&e) == fl_XaText ||
@@ -827,7 +797,7 @@ int fl_handle(const gi_msg_t& thisevent)
 	// clobber the target type, this seems to make some applications
 	// behave that insist on asking for GA_TEXT instead of UTF8_STRING
 	// Does not change GA_STRING as that breaks xclipboard.
-	if (gi_message_notify_selection_target(&e) != GA_STRING) gi_message_notify_selection_target(&e) = fl_XaUtf8String;
+	if (gi_message_notify_selection_target(&e) != GA_STRING) gi_message_notify_selection_target(&e) = GA_UTF8_STRING;
 	gi_change_property( gi_message_notify_selection_requestor(&e), gi_message_notify_selection_property(&e),
 			 gi_message_notify_selection_target(&e), 8, 0,
 			 (unsigned char *)fl_selection_buffer[clipboard],
@@ -842,21 +812,7 @@ int fl_handle(const gi_msg_t& thisevent)
     gi_send_event( gi_message_notify_selection_requestor(&e), 0, 0, (gi_msg_t *)&e);}
     return 1;
 
-  // events where interesting window id is in a different place:
-  /*case CirculateNotify:
-  case CirculateRequest:
-  case ConfigureNotify:
-  case ConfigureRequest:
-  case CreateNotify:
-  case DestroyNotify:
-  case GravityNotify:
-  case MapNotify:
-  case MapRequest:
-  case ReparentNotify:
-  case UnmapNotify:
-    xid = xevent.xmaprequest.window;
-    break;
-	*/
+  // events where interesting window id is in a different place:  
   }
 
   }
@@ -1001,31 +957,19 @@ int fl_handle(const gi_msg_t& thisevent)
     event = FL_HIDE;
     break;
 
-#if 1
   case GI_MSG_EXPOSURE:
 	  {
 	Fl_X *i = Fl_X::i(window);
-
-
     i->wait_for_expose = 0;
-
-//#else
-//  case GI_MSG_EXPOSURE:
-
-	//window->clear_damage((uchar)(window->damage()|FL_DAMAGE_EXPOSE));
-
-    window->damage(FL_DAMAGE_EXPOSE, xevent.body.rect.x, xevent.body.rect.y,
-                   xevent.body.rect.w, xevent.body.rect.h);
-
-	
-	i->flush();
-
-  //printf("GI_MSG_EXPOSURE event got for %d\n", xevent.ev_window);
-
-	//window->clear_damage();
-    return 1;
 	  }
-#endif
+
+  case GI_MSG_GRAPHICSEXPOSURE:
+	//window->clear_damage((uchar)(window->damage()|FL_DAMAGE_EXPOSE));
+    window->damage(FL_DAMAGE_EXPOSE, xevent.body.rect.x, xevent.body.rect.y,
+                   xevent.body.rect.w, xevent.body.rect.h);	
+	//i->flush();
+    return 1;
+
   case GI_MSG_FOCUS_IN:
 	  {
 #if 1
@@ -1037,16 +981,13 @@ int fl_handle(const gi_msg_t& thisevent)
 	attr.x = winfo.x  + 10;
 	attr.y = winfo.y + winfo.height - 30;
 	gi_ime_associate_window(xevent.ev_window, &attr);
-#endif
-	
-    //if (fl_xim_ic) XSetICFocus(fl_xim_ic);
+#endif	
     event = FL_FOCUS;
 	  }
     break;
 
   case GI_MSG_FOCUS_OUT:
     Fl::flush(); // it never returns to main loop when deactivated...
-    //if (fl_xim_ic) XUnsetICFocus(fl_xim_ic);
 	gi_ime_associate_window(xevent.ev_window,NULL);
     event = FL_UNFOCUS;
     break;
@@ -1073,15 +1014,13 @@ int fl_handle(const gi_msg_t& thisevent)
       event = FL_KEYBOARD;//FL_KEYDOWN;
      
 		if (xevent.attribute_1 && xevent.params[3] > 127)
-		{		
-
+		{
 		memset(buffer,0,buffer_len);
-		//len = utf8_wctomb(buffer, event->params[3], buffer_len);
 		len = fl_utf8encode(keycode, buffer);
 		}
 		else
 		 {
-			gi_set_focus_window(xevent.ev_window);
+			
 			Fl::e_keysym = Fl::e_original_keysym = gix2fltk(keycode);
 			buffer[0] = keycode;
 			len = 1;        
@@ -1108,13 +1047,7 @@ int fl_handle(const gi_msg_t& thisevent)
 
 	  Fl::e_state = state;
       // keyup events just get the unshifted keysym:
-    }
-
-  
-    //Fl::e_keysym = int(keysym);
-
-    // replace XK_ISO_Left_Tab (Shift-TAB) with FL_Tab (modifier flags are set correctly by X11)
-    //if (Fl::e_keysym == 0xfe20) Fl::e_keysym = FL_Tab;
+    }  
 
     //set_event_xy();
     Fl::e_is_click = 0;
@@ -1136,6 +1069,7 @@ int fl_handle(const gi_msg_t& thisevent)
       //Fl::e_state |= (FL_BUTTON1 << (xbutton-1));
 	  set_event_xy(xevent.body.message[3], xevent.params[2]);
       event = FL_PUSH;
+	  gi_set_focus_window(xevent.ev_window);
       checkdouble();
     }
 
@@ -1171,21 +1105,12 @@ int fl_handle(const gi_msg_t& thisevent)
     break;
 
   case GI_MSG_MOUSE_ENTER:
-    //if (xevent.xcrossing.detail == NotifyInferior) break;
-    // XInstallColormap(fl_display, Fl_X::i(window)->colormap);
     //set_event_xy();
     //Fl::e_state = xevent.xcrossing.state << 16; //fixme
     event = FL_ENTER;
 
     fl_xmousewin = window;
-    in_a_window = true;
-    /*{ XIMStyles *xim_styles = NULL;
-      if(!fl_xim_im || 
-	  XGetIMValues(fl_xim_im, XNQueryInputStyle, &xim_styles, NULL, NULL)) {
-	fl_init_xim();
-      }
-      if (xim_styles) free(xim_styles);
-    }*/
+    in_a_window = true;   
     break;
 
   case GI_MSG_MOUSE_EXIT:
@@ -1245,10 +1170,8 @@ int fl_handle(const gi_msg_t& thisevent)
                           GI_DESKTOP_WINDOW_ID,
                           xevent.body.rect.x, xevent.body.rect.y,
                           &xpos, &ypos, &junk);
-    //XSetErrorHandler(oldHandler);
-
     // tell Fl_Window about it and set flag to prevent echoing:
-    if ( 0 ) { //!wasXExceptionRaised()
+    if ( 1 ) {
       resize_bug_fix = window;
       window->position(xpos, ypos);
     }
@@ -1392,37 +1315,24 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
 
   ulong root = win->parent() ?
     fl_xid(win->window()) : GI_DESKTOP_WINDOW_ID;
-  //event_mask = win->parent() ? childEventMask : XEventMask;
-
-  /*XSetWindowAttributes attr;
-  int mask = CWBorderPixel|CWColormap|CWEventMask|CWBitGravity;
-  attr.colormap = colormap;
-  attr.border_pixel = 0;
-  attr.bit_gravity = 0; // StaticGravity;*/
+  
   if (win->override()) {
 	  style|=(GI_FLAGS_TEMP_WINDOW);
-	   printf("override got ################\n");
-    //attr.override_redirect = 1;
-    //attr.save_under = 1;
-    //mask |= CWOverrideRedirect | CWSaveUnder;
+	   printf("override got ################\n");    
   } //else attr.override_redirect = 0;
-  //if (Fl::grab()) {
-    //attr.save_under = 1; mask |= CWSaveUnder;
-      //} 
+ 
   if (!win->resizable())
   {
-	  printf("non resize got ################\n");
 	  style |=  GI_FLAGS_NORESIZE;
   }
 
   if (win->modal()){
-	   printf("modal got ################\n");
 	  style |= ( GI_FLAGS_MENU_WINDOW | GI_FLAGS_TEMP_WINDOW);
   }
   else if (!win->border()) {
 	style |= (GI_FLAGS_NON_FRAME);
-	printf("non border ################\n");
-  }//attr.override_redirect = 1; mask |= CWOverrideRedirect;
+  }//
+
 
 
   if (fl_background_pixel >= 0) {
@@ -1457,10 +1367,7 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
     // Communicate all kinds 'o junk to the X gi_window_id_t Manager:
 
     win->label(win->label(), win->iconlabel());
-
-    //gi_change_property( xp->xid, WM_PROTOCOLS,
-    //                GA_ATOM, 32, 0, (uchar*)&WM_DELETE_WINDOW, 1);
-
+    
     // send size limits and border:
     xp->sendxjunk();
 
@@ -1504,24 +1411,17 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
     gi_change_property( xp->xid, fl_XdndAware,
                     GA_ATOM, sizeof(int)*8, 0, (unsigned char*)&version, 1);
 
-    //XWMHints *hints = XAllocWMHints();
-    //hints->input = TRUE;
-    //hints->flags = InputHint;
-    if (fl_show_iconic) {
-      //hints->flags |= StateHint;
-      //hints->initial_state = IconicState;
+   
+    if (fl_show_iconic) {      
       fl_show_iconic = 0;
       showit = 0;
     }
     if (win->icon()) {
 		gi_image_t *img;
 		img = (gi_image_t *)win->icon();
-		gi_set_window_icon(xp->xid,(uint32_t*)img->rgba,img->w,img->h);
-      //hints->icon_pixmap = (Pixmap)win->icon();
-      //hints->flags       |= IconPixmapHint;
+		gi_set_window_icon(xp->xid,(uint32_t*)img->rgba,img->w,img->h);      
     }
-    //XSetWMHints( xp->xid, hints);
-    //free(hints);
+   
   }
 
 #if 0
@@ -1563,25 +1463,6 @@ void Fl_X::sendxjunk() {
 
   //fixme dpp
 
-/*
-  
-  if (w->flags() & Fl_Widget::FORCE_POSITION) {
-    hints->flags |= USPosition;
-    hints->x = w->x();
-    hints->y = w->y();
-  }
-
-  if (!w->border()) {
-    prop[0] |= 2; // MWM_HINTS_DECORATIONS
-    prop[2] = 0; // no decorations
-  }
-
-  //XSetWMNormalHints(fl_display, xid, hints);
-  gi_change_property( xid,
-                  fl_MOTIF_WM_HINTS, fl_MOTIF_WM_HINTS,
-                  32, 0, (unsigned char *)prop, 5);
-  free(hints);
-  */
 }
 
 void Fl_Window::size_range_() {
@@ -1644,7 +1525,6 @@ void Fl_Window::show() {
   } else {
     gi_raise_window( i->xid);
 	 XMapWindow(fl_display, i->xid); 
-    //gi_show_window( i->xid);
   }
 
   

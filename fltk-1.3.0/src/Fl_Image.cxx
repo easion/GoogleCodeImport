@@ -557,8 +557,8 @@ void Fl_Xlib_Graphics_Driver::draw(Fl_RGB_Image *img, int XP, int YP, int WP, in
 
 	  rgn = ((Fl_Bitmask)img->mask_)->region;
       // make X use the bitmap as a mask:
-      //XSetClipMask(fl_display, fl_gc, img->mask_); //fixme dpp
-	  gi_set_gc_clip_rectangles( fl_gc,  rgn->rects, rgn->numRects); //FIXME dpp
+	  if(rgn)
+	  gi_set_gc_clip_rectangles( fl_gc,  rgn->rects, rgn->numRects); //
       int ox = X-cx; if (ox < 0) ox += img->w();
       int oy = Y-cy; if (oy < 0) oy += img->h();
       gi_gc_set_clip_origin( fl_gc, X-cx, Y-cy);

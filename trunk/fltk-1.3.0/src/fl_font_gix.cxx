@@ -3,56 +3,84 @@
 
 #ifndef FL_DOXYGEN
 
+/*
 
-int gi_free_fonts_list(char** list, int n)
-{
-	int i;
+find font arial@Bitstream Vera Sans Roman
+find font fixed@helvetica Regular
+find font gbk@FZXiHeiGBK-YS01 Regular
+find font heiti@FZXiHeiGBK-YS01 Regular
+find font helvB12@Helvetica Bold
 
-	if (!list)
-	{
-		return -1;
-	}
 
-	for (i=0; i<n; i++)
-	{
-		free(list[i]);
-	}
+*/
 
-	free(list);
-	return 0;
-}
+//FL_FREE_FONT
+static Fl_Fontdesc built_in_table[16] = {
+{"simsun@SimSun Regular", 0},
+{"songjian@FZXiaoBiaoSong-B05S Regular", 0},
+{"gbk@FZXiHeiGBK-YS01 Regular", 0},
+{"arial@Bitstream Vera Sans Roman", 0},
+{"Vera@Bitstream Vera Sans Roman", 0},
+{"fixed@helvetica Regular", 0},
+{"VeraMoIt@Bitstream Vera Sans Mono Oblique", 0},
+{"VeraSe@Bitstream Vera Serif Roman", 0},
+{"VeraMono@Bitstream Vera Sans Mono Roman", 0},
+{"VeraMoBd@Bitstream Vera Sans Mono Bold", 0},
+{"VeraMoBI@Bitstream Vera Sans Mono Bold Oblique", 0},
+{"VeraIt@Bitstream Vera Sans Oblique", 0},
+{"VeraBd@Bitstream Vera Sans Bold", 0},
+{"VeraBI@Bitstream Vera Sans Bold Oblique", 0},
+{"Vera@Bitstream Vera Sans Roman", 0},
+{"Vera@Bitstream Vera Sans Roman", 0}
+};
+
+Fl_Fontdesc* fl_fonts = built_in_table;
+
+
+//const char* fl_encoding = "iso8859-1";
+const char* fl_encoding = "iso10646-1";
+
 
 
 Fl_Font_Descriptor::Fl_Font_Descriptor(const char* name, Fl_Fontsize size) {
   char buf[256];
+  const char *p;
+  char* fname = (char*)name;
 
-  if (!name)
+  if (!fname)
   {
-	  font = font = gi_create_ufont("Vera/9");
-	  return;
+	  fname = (char*)built_in_table[0].name;
   }
 
-  snprintf(buf,256,"%s/%d", name,size);
+  p = strchr(fname,'@');
+  if (p)
+  {
+	  char tmp[256];
+	  strncpy(tmp, fname, 256);
+	  tmp[p-fname] = 0;
+	  snprintf(buf,256,"%s/%d", tmp,size);
+  }
+  else{
+	  snprintf(buf,256,"%s/%d", fname,size);
+  }
+  
  
   font = gi_create_ufont( buf);
   if (!font) {
-	  char *_font =NULL;
+	  const char *_font =NULL;
 	  _font = getenv("FLTK_FONT");
 	  if (!_font)
-	  {
 		  _font = "simsun";
-	  }
-    Fl::warning("bad font: %s %d", name, size);
-	snprintf(buf,256,"%s/%d",_font, size-2);
-	//snprintf(buf,256,"Vera/%d", size);
+    Fl::warning("create bad font:%s - %s %d",buf, fname, size);
+	snprintf(buf,256,"%s/%d",_font, size);
     font = gi_create_ufont(buf);
-	if (font)
-	{
-		gi_ufont_set_format(font, GI_RENDER_a8);
-	}
-	//gi_ufont_set_size(font, 10);
   }
 
+  if (font)
+  {
+	gi_ufont_set_format(font, GI_RENDER_a8);
+	//gi_ufont_set_size(font, 10);
+  }
 }
 
 
@@ -68,175 +96,18 @@ Fl_Font_Descriptor::~Fl_Font_Descriptor() {
 
 // WARNING: if you add to this table, you must redefine FL_FREE_FONT
 // in Enumerations.H & recompile!!
-static Fl_Fontdesc built_in_table[] = {
-{"-*-helvetica-medium-r-normal--*"},
-{"-*-helvetica-bold-r-normal--*"},
-{"-*-helvetica-medium-o-normal--*"},
-{"-*-helvetica-bold-o-normal--*"},
-{"-*-courier-medium-r-normal--*"},
-{"-*-courier-bold-r-normal--*"},
-{"-*-courier-medium-o-normal--*"},
-{"-*-courier-bold-o-normal--*"},
-{"-*-times-medium-r-normal--*"},
-{"-*-times-bold-r-normal--*"},
-{"-*-times-medium-i-normal--*"},
-{"-*-times-bold-i-normal--*"},
-{"-*-symbol-*"},
-{"-*-lucidatypewriter-medium-r-normal-sans-*"},
-{"-*-lucidatypewriter-bold-r-normal-sans-*"},
-{"-*-*zapf dingbats-*"}
-};
 
-Fl_Fontdesc* fl_fonts = built_in_table;
-
-#define MAXSIZE 32767
-
-// return dash number N, or pointer to ending null if none:
-const char* fl_font_word(const char* p, int n) {
-  while (*p) {if (*p=='-') {if (!--n) break;} p++;}
-  return p;
-}
-
-// return a pointer to a number we think is "point size":
-char* fl_find_fontsize(char* name) {
-  char* c = name;
-  // for standard x font names, try after 7th dash:
-  if (*c == '-') {
-    c = (char*)fl_font_word(c,7);
-    if (*c++ && isdigit(*c)) return c;
-    return 0; // malformed x font name?
-  }
-  char* r = 0;
-  // find last set of digits:
-  for (c++;* c; c++)
-    if (isdigit(*c) && !isdigit(*(c-1))) r = c;
-  return r;
-}
-
-//const char* fl_encoding = "iso8859-1";
-const char* fl_encoding = "iso10646-1";
-
-// return true if this matches fl_encoding:
-int fl_correct_encoding(const char* name) {
-  if (*name != '-') return 0;
-  const char* c = fl_font_word(name,13);
-  return (*c++ && !strcmp(c,fl_encoding));
-}
-
-static const char *find_best_font(const char *fname, int size) {
-  static int cnt;
-  static char **list = NULL;
 // locate or create an Fl_Font_Descriptor for a given Fl_Fontdesc and size:
-  if (list) gi_free_fonts_list(list, cnt);
-  list = gi_list_fonts( fname, 100, &cnt);
-  if (!list) return "fixed";
-
-  // search for largest <= font size:
-  char* name = list[0]; int ptsize = 0;     // best one found so far
-  int matchedlength = 32767;
-  char namebuffer[1024];        // holds scalable font name
-  int found_encoding = 0;
-  int m = cnt; if (m<0) m = -m;
-  for (int n=0; n < m; n++) {
-    char* thisname = list[n];
-    if (fl_correct_encoding(thisname)) {
-      if (!found_encoding) ptsize = 0; // force it to choose this
-      found_encoding = 1;
-    } else {
-      if (found_encoding) continue;
-    }
-    char* c = (char*)fl_find_fontsize(thisname);
-    int thissize = c ? atoi(c) : MAXSIZE;
-    int thislength = strlen(thisname);
-    if (thissize == size && thislength < matchedlength) {
-      // exact match, use it:
-      name = thisname;
-      ptsize = size;
-      matchedlength = thislength;
-    } else if (!thissize && ptsize!=size) {
-      // whoa!  A scalable font!  Use unless exact match found:
-      int l = c-thisname;
-      memcpy(namebuffer,thisname,l);
-      l += sprintf(namebuffer+l,"%d",size);
-      while (*c == '0') c++;
-      strcpy(namebuffer+l,c);
-      name = namebuffer;
-      ptsize = size;
-    } else if (!ptsize ||	// no fonts yet
-	       (thissize < ptsize && ptsize > size) || // current font too big
-	       (thissize > ptsize && thissize <= size) // current too small
-      ) {
-      name = thisname;
-      ptsize = thissize;
-      matchedlength = thislength;
-    }
-  }
-
-  return name;
-}
-
-static char *put_font_size(const char *n, int size)
-{
-        int i = 0;
-        char *buf;
-        const char *ptr;
-        const char *f;
-        char *name;
-        int nbf = 1;
-        name = strdup(n);
-        while (name[i]) {
-                if (name[i] == ',') {nbf++; name[i] = '\0';}
-                i++;
-        }
-
-        buf = (char*) malloc(nbf * 256);
-        buf[0] = '\0';
-        ptr = name;
-        i = 0;
-        while (ptr && nbf > 0) {
-                f = find_best_font(ptr, size);
-                while (*f) {
-                        buf[i] = *f;
-                        f++; i++;
-                }
-                nbf--;
-                while (*ptr) ptr++;
-                if (nbf) {
-                        ptr++;
-                        buf[i] = ',';
-                        i++;
-                }
-                while(isspace(*ptr)) ptr++;
-        }
-        buf[i] = '\0';
-        free(name);
-        return buf;
-}
-
-
-char *fl_get_font_xfld(int fnum, int size) {
-  Fl_Fontdesc* s = fl_fonts+fnum;
-  if (!s->name) s = fl_fonts; // use font 0 if still undefined
+static Fl_Font_Descriptor* find(int fnum, int size) { 
   fl_open_display();
-  return put_font_size(s->name, size);
-}
-
-// locate or create an Fl_Font_Descriptor for a given Fl_Fontdesc and size:
-static Fl_Font_Descriptor* find(int fnum, int size) {
-  char *name;
   Fl_Fontdesc* s = fl_fonts+fnum;
-  if (!s->name) s = fl_fonts; // use font 0 if still undefined
+  if (!s->name) s = fl_fonts; // use 0 if fnum undefined
   Fl_Font_Descriptor* f;
   for (f = s->first; f; f = f->next)
     if (f->size == size) return f;
-  fl_open_display();
-
-  name = put_font_size(s->name, size);
-  f = new Fl_Font_Descriptor(name, size);
-  f->size = size;
+  f = new Fl_Font_Descriptor(s->name, size);
   f->next = s->first;
   s->first = f;
-  free(name);
   return f;
 }
 
@@ -321,8 +192,6 @@ double Fl_Xlib_Graphics_Driver::width(unsigned int c) {
 
   gi_ufont_param(myfont,buf,1, &ww, &hh);
   return (double) ww;
-  //if (font_descriptor()) return (double) XUtf8UcsWidth(font_descriptor()->font, c);
-  //else return -1;
 }
 
 void Fl_Xlib_Graphics_Driver::text_extents(const char *c, int n, int &dx, int &dy, int &W, int &H) {
@@ -347,17 +216,12 @@ void Fl_Xlib_Graphics_Driver::draw(const char* c, int n, int x, int y) {
     font_gc = fl_gc;
   }
 
-  //if (!font_descriptor())
-	//  return ;
+  if (!font_descriptor())
+	  return ;
 
   myfont = font_descriptor()->font;
 
   if (fl_gc){
-	 
-	  //y -= gi_ufont_ascent_get(myfont);
-
-	  //gi_ufont_set_format(myfont, GI_RENDER_a8);
-
 	  gi_gc_attch_window(fl_gc, fl_window); //bind for gc
 	  gi_ufont_draw( fl_gc,myfont,c,x,y,  n);
   }

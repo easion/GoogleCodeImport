@@ -85,18 +85,29 @@ void fl_scroll(int X, int Y, int W, int H, int dx, int dy,
   }
 
 #if defined(USE_GIX)
-  gi_gc_attch_window(fl_gc,fl_window);
-  gi_copy_area( fl_window, fl_window, fl_gc,
+  int err;
+  err = gi_gc_attch_window(fl_gc,fl_window);
+  if (err){
+	  perror("gi_gc_attch_window fail\n");
+  }
+  err = gi_copy_area( fl_window,  fl_gc,
 	    src_x, src_y, src_w, src_h, dest_x, dest_y);
+ 
   // we have to sync the display and get the GraphicsExpose events! (sigh)
-  //for (;;) {
-    //gi_msg_t e; XWindowEvent(fl_display, fl_window, ExposureMask, &e);
+  //for (;;) 
+	 {
+    gi_msg_t e;
+	int err;
+	err = gi_check_typed_message(&e, fl_window, GI_MASK_GRAPHICSEXPOSURE);
     //if (e.type == NoExpose) break;
-    // otherwise assume it is a GraphicsExpose event:
-    //draw_area(data, e.xexpose.x, e.xexpose.y,
-	 //     e.xexpose.width, e.xexpose.height);
     //if (!e.xgraphicsexpose.count) break;
-  //}
+	if (!err)
+	{
+		draw_area(data, e.body.rect.x, e.body.rect.y,
+	      e.body.rect.w, e.body.rect.h);
+	}
+   
+  }
 #elif defined(USE_X11)
   XCopyArea(fl_display, fl_window, fl_window, fl_gc,
 	    src_x, src_y, src_w, src_h, dest_x, dest_y);

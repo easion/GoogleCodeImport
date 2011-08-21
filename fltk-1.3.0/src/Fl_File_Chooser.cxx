@@ -1,5 +1,5 @@
 //
-// "$Id: Fl_File_Chooser.cxx 8786 2011-06-07 11:41:36Z manolo $"
+// "$Id: Fl_File_Chooser.fl 8786 2011-06-07 11:41:36Z manolo $"
 //
 // Fl_File_Chooser dialog for the Fast Light Tool Kit (FLTK).
 //
@@ -61,11 +61,163 @@ void Fl_File_Chooser::cb_newButton(Fl_Button* o, void* v) {
   ((Fl_File_Chooser*)(o->parent()->parent()->user_data()))->cb_newButton_i(o,v);
 }
 
-#include <FL/Fl_Bitmap.H>
-static unsigned char idata_new[] =
-{0,0,120,0,132,0,2,1,1,254,1,128,49,128,49,128,253,128,253,128,49,128,49,
-128,1,128,1,128,255,255,0,0};
-static Fl_Bitmap image_new(idata_new, 16, 16);
+#include <FL/Fl_Pixmap.H>
+static const char *idata_folder[] = {
+"16 16 136 2",
+"  \tc None",
+". \tc #469FFF",
+"+ \tc #4193FF",
+"@ \tc #4499FF",
+"# \tc #2C63AC",
+"$ \tc #4DA0FF",
+"% \tc #B5D9FB",
+"& \tc #AAD3FB",
+"* \tc #ADD3FB",
+"= \tc #89C4FF",
+"- \tc #184888",
+"; \tc #4495FF",
+"> \tc #AED5FB",
+", \tc #6DB3F9",
+"\' \tc #6FB2F9",
+") \tc #6BAEF8",
+"! \tc #67ABF6",
+"~ \tc #549FF9",
+"{ \tc #3E91FF",
+"] \tc #ACD4FB",
+"^ \tc #6BAEF9",
+"/ \tc #6CAFF8",
+"( \tc #66AAF7",
+"_ \tc #5DA3F6",
+": \tc #74AEF7",
+"< \tc #9EC4F8",
+"[ \tc #92BCF7",
+"} \tc #8DB5F5",
+"| \tc #88B1F3",
+"1 \tc #83ABF2",
+"2 \tc #80A8F0",
+"3 \tc #87AEF5",
+"4 \tc #0940B7",
+"5 \tc #AAD2FB",
+"6 \tc #67ACF8",
+"7 \tc #68ABF8",
+"8 \tc #61A4F7",
+"9 \tc #5B9FF5",
+"0 \tc #5399F3",
+"a \tc #498FF1",
+"b \tc #3F85EF",
+"c \tc #367CEB",
+"d \tc #2E73E8",
+"e \tc #286BE6",
+"f \tc #2164E2",
+"g \tc #2163E5",
+"h \tc #023AB6",
+"i \tc #4394FF",
+"j \tc #A7D0FA",
+"k \tc #63A9F7",
+"l \tc #61A7F7",
+"m \tc #5BA0F6",
+"n \tc #5499F4",
+"o \tc #4B90F2",
+"p \tc #4186EF",
+"q \tc #377DEB",
+"r \tc #2E73E7",
+"s \tc #266AE5",
+"t \tc #2062E2",
+"u \tc #1C5DDF",
+"v \tc #1A5CE2",
+"w \tc #A4CEF9",
+"x \tc #5DA5F7",
+"y \tc #5DA1F6",
+"z \tc #559AF4",
+"A \tc #4C91F3",
+"B \tc #4489F1",
+"C \tc #3A7FED",
+"D \tc #3075E9",
+"E \tc #276BE5",
+"F \tc #2062E1",
+"G \tc #1B5CDE",
+"H \tc #1758DB",
+"I \tc #1857DE",
+"J \tc #0239B6",
+"K \tc #A1CBF9",
+"L \tc #589FF6",
+"M \tc #559BF5",
+"N \tc #4F96F3",
+"O \tc #478CF2",
+"P \tc #3D84F0",
+"Q \tc #3378EB",
+"R \tc #2B6EE7",
+"S \tc #2265E3",
+"T \tc #1C5DDE",
+"U \tc #1757DB",
+"V \tc #1554DA",
+"W \tc #1555DD",
+"X \tc #0139B5",
+"Y \tc #4696FF",
+"Z \tc #FFFFFF",
+"` \tc #FBFBFB",
+" .\tc #F2F2F2",
+"..\tc #E9E9E9",
+"+.\tc #E0E0E0",
+"@.\tc #D7D7D7",
+"#.\tc #D4D4D4",
+"$.\tc #A9A9A9",
+"%.\tc #BABABA",
+"&.\tc #9E9990",
+"*.\tc #0A3DAF",
+"=.\tc #FEFEFE",
+"-.\tc #F8F8F8",
+";.\tc #F1F1F1",
+">.\tc #E8E8E8",
+",.\tc #DCDCDC",
+"\'.\tc #D6D6D6",
+").\tc #D2D2D2",
+"!.\tc #A7A7A7",
+"~.\tc #B7B7B7",
+"{.\tc #929292",
+"].\tc #BAB6AC",
+"^.\tc #0E41B3",
+"/.\tc #F0F0F0",
+"(.\tc #E5E5E5",
+"_.\tc #DDDDDD",
+":.\tc #D3D3D3",
+"<.\tc #D0D0D0",
+"[.\tc #ABABAB",
+"}.\tc #B5B5B5",
+"|.\tc #939393",
+"1.\tc #ADADAD",
+"2.\tc #938E85",
+"3.\tc #0A3DAE",
+"4.\tc #FFFFFE",
+"5.\tc #F4F4F4",
+"6.\tc #EDEDED",
+"7.\tc #DBDBDB",
+"8.\tc #AEAEAE",
+"9.\tc #969696",
+"0.\tc #878787",
+"a.\tc #AFABA1",
+"b.\tc #0D40B2",
+"c.\tc #0037B2",
+"d.\tc #0034A8",
+"e.\tc #0038B6",
+"                                ",
+"    . + @ #                     ",
+"  $ % & * = -                   ",
+"; > , \' ) ! ~ { + + + + + .     ",
+"; ] ^ / ( _ : < [ } | 1 2 3 4   ",
+"; 5 6 7 8 9 0 a b c d e f g h   ",
+"i j k l m n o p q r s t u v h   ",
+"i w x y z A B C D E F G H I J   ",
+"i K L M N O P Q R S T U V W X   ",
+"Y Z Z Z Z `  ...+.@.#.$.%.&.*.  ",
+"Y Z Z =.-.;.>.,.\'.).!.~.{.].^.  ",
+"Y Z =.-./.(._.:.<.[.}.|.1.2.3.  ",
+"Y 4.5.6.(.7.#.<.1.8.9.!.0.a.b.  ",
+"  c.d.d.d.d.d.d.d.d.d.d.d.e.    ",
+"                                ",
+"                                "
+};
+static Fl_Pixmap image_folder(idata_folder);
 
 void Fl_File_Chooser::cb__i(Fl_Tile*, void*) {
   update_preview();
@@ -184,7 +336,7 @@ Fl_File_Chooser::Fl_File_Chooser(const char *d, const char *p, int t, const char
         favoritesButton->label(favorites_label);
       } // Fl_Menu_Button* favoritesButton
       { Fl_Button* o = newButton = new Fl_Button(455, 10, 25, 25);
-        newButton->image(image_new);
+        newButton->image(image_folder);
         newButton->labelsize(8);
         newButton->callback((Fl_Callback*)cb_newButton);
         o->tooltip(new_directory_tooltip);
@@ -471,5 +623,5 @@ Fl_Widget* Fl_File_Chooser::add_extra(Fl_Widget* gr) {
 }
 
 //
-// End of "$Id: Fl_File_Chooser.cxx 8786 2011-06-07 11:41:36Z manolo $".
+// End of "$Id: Fl_File_Chooser.fl 8786 2011-06-07 11:41:36Z manolo $".
 //

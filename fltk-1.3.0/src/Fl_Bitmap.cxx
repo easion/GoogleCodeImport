@@ -174,12 +174,12 @@ Fl_Bitmask fl_create_bitmask(int w, int h, const uchar *data) {
   bm->region = gi_create_region_from_bitmap_pitch((char *)bm->image->rgba,
                                (w+7)&-8, h, bm->image->pitch);
 
-  fprintf(stderr, "fl_create_bitmask calling ...\n");
+  //fprintf(stderr, "fl_create_bitmask calling ...\n");
   return bm;
 }
 
 void fl_delete_bitmask(Fl_Bitmask bm) {
-  fprintf(stderr, "fl_create_bitmask calling ...\n");
+  //fprintf(stderr, "fl_delete_bitmask calling ...\n");
   //fl_delete_offscreen((Fl_Offscreen)bm);
   gi_destroy_image((gi_image_t*)bm->image);
   XDestroyRegion((gi_region_ptr_t)bm->region);

@@ -102,7 +102,7 @@ static void fl_copy_offscreen_to_display(int x, int y, int w, int h, Fl_Offscree
   {
 	  perror("gi_gc_attch_window fail");
   }
-  err = gi_copy_area( pixmap, fl_window, fl_gc, srcx, srcy, w, h, x, y);
+  err = gi_copy_area( pixmap,  fl_gc, srcx, srcy, w, h, x, y);
   if (err)
   {
 	  fprintf(stderr, "gi_copy_area#1 to %d: %s\n",fl_window, strerror(errno) );

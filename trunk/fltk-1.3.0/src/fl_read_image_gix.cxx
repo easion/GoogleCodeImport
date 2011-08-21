@@ -1,4 +1,4 @@
-//fixme dpp
+
 uchar *				// O - Pixel buffer or NULL if failed
 fl_read_image(uchar *p,		// I - Pixel buffer or NULL to allocate
               int   X,		// I - Left position
@@ -51,9 +51,9 @@ fl_read_image(uchar *p,		// I - Pixel buffer or NULL to allocate
 	  Fl::screen_xywh(sx, sy, sw, sh, fl_screen);
   }
 #endif
-
   if (fl_window)
   {
+	printf("fl_read_image got ################\n");
 	err = gi_get_window_buffer(fl_window,X,Y,w,h,
 		line_size<<16 | FALSE,GI_RENDER_r8g8b8,dib);
   }

@@ -43,7 +43,6 @@ extern gi_atom_id_t fl_XdndActionCopy;
 extern gi_atom_id_t fl_XdndFinished;
 //extern gi_atom_id_t fl_XdndProxy;
 extern gi_atom_id_t fl_XdndURIList;
-extern gi_atom_id_t fl_XaUtf8String;
 
 extern char fl_i_own_selection[2];
 extern char *fl_selection_buffer[2];
@@ -174,7 +173,7 @@ int Fl::dnd() {
         } else {
 	  // Send plain text...
 	  fl_sendClientMessage(target_window, fl_XdndEnter, source_window,
-			       dndversion<<24, fl_XaUtf8String, 0, 0);
+			       dndversion<<24, GA_UTF8_STRING, 0, 0);
 	}
 
       } //dnd version

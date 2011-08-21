@@ -1,5 +1,5 @@
 
-//fixme dpp
+
 
 #ifndef FL_DOXYGEN
 
@@ -21,7 +21,7 @@ static Fl_Fontdesc built_in_table[16] = {
 {"gbk@FZXiHeiGBK-YS01 Regular", 0},
 {"arial@Bitstream Vera Sans Roman", 0},
 {"Vera@Bitstream Vera Sans Roman", 0},
-{"fixed@helvetica Regular", 0},
+{"arial@Bitstream Vera Sans Roman", 0},
 {"VeraMoIt@Bitstream Vera Sans Mono Oblique", 0},
 {"VeraSe@Bitstream Vera Serif Roman", 0},
 {"VeraMono@Bitstream Vera Sans Mono Roman", 0},
@@ -47,14 +47,12 @@ Fl_Font_Descriptor::Fl_Font_Descriptor(const char* name, Fl_Fontsize size) {
   const char *p;
   char* fname = (char*)name;
 
-  if (!fname)
-  {
+  if (!fname){
 	  fname = (char*)built_in_table[0].name;
   }
 
   p = strchr(fname,'@');
-  if (p)
-  {
+  if (p){
 	  char tmp[256];
 	  strncpy(tmp, fname, 256);
 	  tmp[p-fname] = 0;
@@ -62,8 +60,7 @@ Fl_Font_Descriptor::Fl_Font_Descriptor(const char* name, Fl_Fontsize size) {
   }
   else{
 	  snprintf(buf,256,"%s/%d", fname,size);
-  }
-  
+  }  
  
   font = gi_create_ufont( buf);
   if (!font) {

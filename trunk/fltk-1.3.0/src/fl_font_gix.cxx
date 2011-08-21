@@ -150,15 +150,15 @@ int Fl_Xlib_Graphics_Driver::height() {
 
 int Fl_Xlib_Graphics_Driver::descent() {
    gi_ufont_t *myfont;
-  int pad = 0;
+  //int pad = 0;
 
   if (!font_descriptor())
 	  return -1;
 
   myfont = font_descriptor()->font;
-  pad = gi_ufont_ascent_get(myfont);
+  //pad = gi_ufont_ascent_get(myfont);
   
-  return pad + gi_ufont_descent_get(myfont);
+  return  gi_ufont_descent_get(myfont) ;
 }
 
 double Fl_Xlib_Graphics_Driver::width(const char* c, int n) {

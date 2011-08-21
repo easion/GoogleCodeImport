@@ -117,6 +117,11 @@ int Fl::dnd() {
 	  printf("line %d: dnd go loop fail (%d,%d)\n",__LINE__,  e_x_root,e_y_root);
 	  }
 
+	  if (junk3 & (GI_BUTTON_L|GI_BUTTON_R|GI_BUTTON_M) == 0)
+	  {
+	  printf("line %d: dnd child %d go loop (%d,%d)\n",__LINE__, child, e_x_root,e_y_root);
+	  }
+
       if (!child) {
 	if (!new_window && (new_version = dnd_aware(root))) new_window = root;
 	break;
@@ -126,12 +131,10 @@ int Fl::dnd() {
       if ((new_local_window = fl_find(child))) break;
       if ((new_version = dnd_aware(new_window))) break;
 
-	  printf("line %d: dnd child %d go loop (%d,%d)\n",__LINE__, child, e_x_root,e_y_root);
 
 	  usleep(100000);
     }//end loop
 
-	printf("line %d: dnd child %d exit\n",__LINE__, child);
 
     if (new_window != target_window) {
 
@@ -188,7 +191,6 @@ int Fl::dnd() {
 			   fl_XdndActionCopy);
     }
 
-	printf("line %d: dnd got wait\n",__LINE__);
     Fl::wait();
   } //end of pushed
 
@@ -222,7 +224,6 @@ int Fl::dnd() {
 
   fl_local_grab = 0;
   source_fl_win->cursor(FL_CURSOR_DEFAULT);
-  printf("line %d: dnd got out",__LINE__);
   return 1;
 }
 

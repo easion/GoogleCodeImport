@@ -1358,6 +1358,7 @@ void Fl_X::make_xid(Fl_Window* win, gi_screen_info_t *visual)
 
   Fl_X* xp =  set_xid(win, newwin);
   gi_set_events_mask(newwin, event_mask);
+  gi_set_window_background(newwin,WINDOW_COLOR,GI_BG_USE_NONE);
 
   printf("%s: newwin=%d, root=%d %lx\n",__FUNCTION__, newwin, root, style);
   int showit = 1;

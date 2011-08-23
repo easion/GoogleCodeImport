@@ -1,6 +1,7 @@
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
 fl_xp.o: ../FL/Fl.H ../FL/fl_utf8.h ../FL/Fl_Export.H ../FL/fl_types.h
+fl_gleam.o: ../FL/Fl.H ../FL/fl_utf8.h ../FL/Fl_Export.H ../FL/fl_types.h
 Fl.o: ../config.h ../FL/Fl.H ../FL/fl_utf8.h ../FL/Fl_Export.H
 Fl.o: ../FL/fl_types.h ../FL/Xutf8.h ../FL/Enumerations.H ../FL/Fl_Window.H
 Fl.o: ../FL/Fl_Group.H ../FL/Fl_Widget.H ../FL/Fl_Tooltip.H ../FL/Fl_Widget.H

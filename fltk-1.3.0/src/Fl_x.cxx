@@ -1485,9 +1485,14 @@ void Fl_Window::label(const char *name,const char *iname) {
   Fl_Widget::label(name);
   iconlabel_ = iname;
   if (shown() && !parent()) {
-    if (!name) name = "";
-    if (!iname) iname = fl_filename_name(name);
+    if (!name) {
+		name = "";
+	}
+	else{
 	gi_set_window_utf8_caption(i->xid, name);
+	//printf("set window name %s\n",name);
+	}
+    if (!iname) iname = fl_filename_name(name);
 	gi_set_window_icon_name(i->xid, iname);
     }
 }

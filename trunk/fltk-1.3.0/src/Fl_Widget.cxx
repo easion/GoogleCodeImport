@@ -108,7 +108,8 @@ int Fl_Widget::handle(int) {
 }
 
 /** Default font size for widgets */
-Fl_Fontsize FL_NORMAL_SIZE = 14;
+//Fl_Fontsize FL_NORMAL_SIZE = 14;
+Fl_Fontsize FL_NORMAL_SIZE = 11;
 
 Fl_Widget::Fl_Widget(int X, int Y, int W, int H, const char* L) {
 

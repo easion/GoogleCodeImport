@@ -472,7 +472,7 @@ _gdk_gix_display_convert_selection (GdkDisplay *display,
   if (GDK_WINDOW_DESTROYED (requestor) || !GDK_WINDOW_IS_GIX (requestor))
     return;
 
-  gdk_window_ensure_native (requestor);
+  //gdk_window_ensure_native (requestor);
 
   gi_convert_selection (
                      gdk_x11_atom_to_xatom_for_display (display, selection),

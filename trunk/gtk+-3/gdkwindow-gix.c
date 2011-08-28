@@ -407,9 +407,11 @@ _gdk_gix_display_create_window_impl (GdkDisplay    *display,
 	if (!title || !*title)
 	  title = "";
 
+	//GI_FLAGS_DOUBLE_BUFFER
+
 	mainWin = gi_create_window(xparent, x,y,
 		window_width, window_height,
-		GI_RGB( 192, 192, 192 ),win_flags|GI_FLAGS_DOUBLE_BUFFER);
+		GI_RGB( 192, 192, 192 ),win_flags);
 
 	if (mainWin <= 0)
 	{
@@ -1626,6 +1628,7 @@ gdk_gix_window_set_decorations (GdkWindow      *window,
   g_return_if_fail (GDK_IS_WINDOW (window));
 	g_print("gdk_gix_window_set_decorations called\n");
 
+/*
 	GDK_NOTE (MISC, g_print ("gdk_window_set_decorations: %p: %s %s%s%s%s%s%s\n",
 			   GDK_WINDOW_XID (window),
 			   (decorations & GDK_DECOR_ALL ? "clearing" : "setting"),
@@ -1639,7 +1642,7 @@ gdk_gix_window_set_decorations (GdkWindow      *window,
 	*decorations_copy = decorations;
 	g_object_set_qdata_full (G_OBJECT (window), get_decorations_quark (), decorations_copy, g_free);
 	(decorations & GDK_DECOR_MAXIMIZE ? "MAXIMIZE " : "")));
-
+*/
 /*
  
   memset(&hints, 0, sizeof(hints));
@@ -1674,7 +1677,7 @@ gdk_gix_window_set_functions (GdkWindow    *window,
   GdkWMFunction* functions_copy;
 
   g_return_if_fail (GDK_IS_WINDOW (window));
-  
+#if 0  
   GDK_NOTE (MISC, g_print ("gdk_window_set_functions: %p: %s %s%s%s%s%s\n",
 			   GDK_WINDOW_HWND (window),
 			   (functions & GDK_FUNC_ALL ? "clearing" : "setting"),
@@ -1683,7 +1686,7 @@ gdk_gix_window_set_functions (GdkWindow    *window,
 			   (functions & GDK_FUNC_MINIMIZE ? "MINIMIZE " : ""),
 			   (functions & GDK_FUNC_MAXIMIZE ? "MAXIMIZE " : ""),
 			   (functions & GDK_FUNC_CLOSE ? "CLOSE " : "")));
-
+#endif
   functions_copy = g_malloc (sizeof (GdkWMFunction));
   *functions_copy = functions;
   g_object_set_qdata_full (G_OBJECT (window), get_functions_quark (), functions_copy, g_free);

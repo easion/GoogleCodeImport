@@ -352,7 +352,7 @@ update_keymap (void)
 	    }
 	}
     }
-  GDK_NOTE (EVENTS, print_keysym_tab ());
+  //GDK_NOTE (EVENTS, print_keysym_tab ());
 } 
 
 

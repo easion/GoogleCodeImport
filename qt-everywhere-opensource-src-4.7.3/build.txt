@@ -1,0 +1,63 @@
+make; cp ../../lib/libQtGui.so.4.7.3 /usr/local/Trolltech/Qt-4.7.3/lib/libQtGui.so.4.7.3 -a
+
+
+
+./configure --prefix-install=no -qt-freetype -no-pch -no-opengl -gix -fast -nomake examples -nomake demos -release -opensource -confirm-license  -phonon -no-phonon-backend -multimedia -no-audio-backend -no-gfx-linuxfb -no-gfx-transformed -no-gfx-multiscreen -no-gfx-vnc -no-gfx-qvfb -no-gfx-directfb -no-glib  -no-kbd-tty -no-kbd-qvfb -no-kbd-qnx -no-kbd-linuxinput -no-mouse-linuxinput -little-endian 
+
+#-no-stl 
+
+
+./configure -opensource -release -shared -fast -gix \
+  -little-endian -qt-freetype  -confirm-license\
+  -qt-zlib -qt-gif  -qt-libpng -qt-libmng -qt-libjpeg -no-libtiff\
+  -make libs -nomake tools -nomake examples -nomake docs -nomake demos \
+  -no-stl  -no-svg -no-phonon -no-phonon-backend  \
+  -no-gfx-linuxfb -no-gfx-transformed -no-gfx-multiscreen -no-gfx-vnc -no-gfx-qvfb \
+  -no-gfx-directfb -no-glib -no-javascript-jit -no-script -no-scripttools \
+  -no-kbd-tty -no-kbd-qvfb -no-kbd-qnx -no-multimedia -no-audio-backend\
+  -no-kbd-linuxinput -no-mouse-linuxinput -no-pch -no-opengl
+
+# -no-sql-sqlite -no-webkit
+
+◊Ó–°ªØ±‡“Î
+./configure -opensource -release -shared -fast -gix \
+  -little-endian -qt-freetype  -confirm-license\
+  -qt-zlib -qt-gif  -qt-libpng -qt-libmng -qt-libjpeg -no-libtiff\
+  -make libs -nomake tools -nomake examples -nomake docs -nomake demos \
+  -no-stl  -no-svg -no-phonon -no-phonon-backend  -no-sql-sqlite -no-webkit \
+  -no-gfx-linuxfb -no-gfx-transformed -no-gfx-multiscreen -no-gfx-vnc -no-gfx-qvfb \
+  -no-gfx-directfb -no-glib -no-javascript-jit -no-script -no-scripttools \
+  -no-kbd-tty -no-kbd-qvfb -no-kbd-qnx -no-multimedia -no-audio-backend\
+  -no-kbd-linuxinput -no-mouse-linuxinput -no-pch -no-opengl
+
+
+
+#   -xplatform qws/linux-arm-g++ -embedded arm -no-qt3support
+
+configure --prefix-install=no -no-pch -no-opengl -no-largefile -fast -nomake examples -nomake demos -release -opensource -confirm-license -no-iconv -phonon -no-phonon-backend -multimedia -no-audio-backend
+Building Qt:
+make
+Install Qt:
+make install
+Install utility for systray support:
+cd src/3rdparty/haiku-tools/qsystray
+make
+make install
+
+Install Qt 4.8.x from sources
+Cloning repository:
+git clone git://gitorious.org/+qt-haiku/qt/qt-haiku-port.git qt-haiku-port
+cd qt-haiku-port
+Select gcc4 compiler as default:
+setgcc gcc4
+Configure:
+configure --prefix-install=no -no-pch -no-opengl -no-largefile -fast -nomake examples -nomake demos -release -opensource -confirm-license -no-iconv -phonon -no-phonon-backend -multimedia -no-audio-backend
+Building Qt:
+make
+Install Qt:
+make install
+
+
+/usr/src/qt-everywhere-opensource-src-4.7.3/bin/qmake -spec ../../mkspecs/linux-g++ -o Makefile gui.pro
+
+

@@ -3,7 +3,9 @@
 ** Copyright (C) 2009 Nokia Corporation and/or its subsidiary(-ies).
 ** Contact: Qt Software Information (qt-info@nokia.com)
 **
-** Copyright (C) 2009 netlabs.org. OS/2 parts.
+** Copyright (C) 2011 www.hanxuantech.com. The Gix parts. 
+** Written by Easion <easion@hanxuantech.com> 
+**
 **
 ** This file is part of the QtGui module of the Qt Toolkit.
 **

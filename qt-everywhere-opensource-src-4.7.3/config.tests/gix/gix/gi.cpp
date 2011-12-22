@@ -4,6 +4,9 @@
 ** All rights reserved.
 ** Contact: Nokia Corporation (qt-info@nokia.com)
 **
+** Copyright (C) 2011 www.hanxuantech.com. The Gix parts. 
+** Written by Easion <easion@hanxuantech.com> 
+**
 ** This file is part of the config.tests of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:LGPL$

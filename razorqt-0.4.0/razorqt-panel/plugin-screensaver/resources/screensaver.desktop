@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=RazorPanel/Plugin
+Name=Screensaver
+Name[pl]=Wygaszacz ekranu
+Name[ru]=Хранитель экрана
+Comment=Activate a screensaver and/or lock the screen
+Comment[pl]=Aktywuje wygaszacz ekranu oraz/albo blokuje ekran
+Comment[ru]=Вклучение хранителя экрана и блокировка его

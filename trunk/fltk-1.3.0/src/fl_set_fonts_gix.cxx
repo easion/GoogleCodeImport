@@ -29,7 +29,8 @@ Fl_Font Fl::set_fonts(const char* xstarname) {
   int xlistsize,i;
   char buf[20];
   if (!xstarname) {
-    strcpy(buf,"-*-"); strcpy(buf+3,fl_encoding);
+    strcpy(buf,"*/*"); 
+	//strcpy(buf+3,fl_encoding);
     xstarname = buf;
   }
   char **xlist = gi_list_fonts( xstarname, 10000, &xlistsize);
@@ -37,10 +38,16 @@ Fl_Font Fl::set_fonts(const char* xstarname) {
 
   for (i=0; i<xlistsize; i++)
   {
-	  char oName[512];
-	  strncpy(oName,xlist[i],512);
+	  char oName[64];
+	  char dummy[64];
+	  char bold[64];
+	  char obli[64];
+	  strncpy(oName,xlist[i],sizeof(oName));
 
-	  printf("find font %s\n", xlist[i]);
+	  //sscanf(xlist[i],"%s/%s/%s/%s/%s/%s/%s",
+		//  dummy,dummy,oName,bold,obli,dummy,dummy);
+
+	  //printf("find font %s for %s\n", xlist[i],xstarname);
 	  Fl::set_font((Fl_Font)(fl_free_font++), strdup(oName));
   }
   

@@ -15,23 +15,24 @@ find font helvB12@Helvetica Bold
 */
 
 //FL_FREE_FONT
+// FL_FREE_FONT
 static Fl_Fontdesc built_in_table[16] = {
-{"simsun@SimSun Regular", 0},
-{"songjian@FZXiaoBiaoSong-B05S Regular", 0},
-{"gbk@FZXiHeiGBK-YS01 Regular", 0},
-{"arial@Bitstream Vera Sans Roman", 0},
-{"Vera@Bitstream Vera Sans Roman", 0},
-{"arial@Bitstream Vera Sans Roman", 0},
-{"VeraMoIt@Bitstream Vera Sans Mono Oblique", 0},
-{"VeraSe@Bitstream Vera Serif Roman", 0},
-{"VeraMono@Bitstream Vera Sans Mono Roman", 0},
-{"VeraMoBd@Bitstream Vera Sans Mono Bold", 0},
-{"VeraMoBI@Bitstream Vera Sans Mono Bold Oblique", 0},
-{"VeraIt@Bitstream Vera Sans Oblique", 0},
-{"VeraBd@Bitstream Vera Sans Bold", 0},
-{"VeraBI@Bitstream Vera Sans Bold Oblique", 0},
-{"Vera@Bitstream Vera Sans Roman", 0},
-{"Vera@Bitstream Vera Sans Roman", 0}
+{"Arial"},
+{"Arial Bold"},
+{"Arial Italic"},
+{"Arial Bold Italic"},
+{"Courier New"},
+{"Courier New Bold"},
+{"Courier New Italic"},
+{"Courier New Bold Italic"},
+{"Times New Roman"},
+{"Times New Roman Bold"},
+{"Times New Roman Italic"},
+{"Times New Roman Bold Italic"},
+{"Symbol"},
+{"Monaco"},
+{"Andale Mono"}, // there is no bold Monaco font on standard Mac
+{"Webdings"},
 };
 
 Fl_Fontdesc* fl_fonts = built_in_table;
@@ -51,29 +52,15 @@ Fl_Font_Descriptor::Fl_Font_Descriptor(const char* name, Fl_Fontsize size) {
 	  fname = (char*)built_in_table[0].name;
   }
 
-  p = strchr(fname,'@');
-  if (p){
-	  char tmp[256];
-	  strncpy(tmp, fname, 256);
-	  tmp[p-fname] = 0;
-	  snprintf(buf,256,"%s/%d", tmp,size);
-  }
-  else{
-	  snprintf(buf,256,"%s/%d", fname,size);
-  }  
+  //Verdana:size=18:bold:dpi=75  
+  snprintf(buf,256,"%s size=%d:dpi=75", fname,size);
+  //snprintf(buf,256,"*/%d/%s/*",size, fname);
  
   font = gi_create_ufont( buf);
-  if (!font) {
-	  const char *_font =NULL;
-	  _font = getenv("FLTK_FONT");
-	  if (!_font)
-		  _font = "simsun";
+  if (!font) {	  
     Fl::warning("create bad font:%s - %s %d",buf, fname, size);
-	snprintf(buf,256,"%s/%d",_font, size);
-    font = gi_create_ufont(buf);
   }
-
-  if (font)
+  else
   {
 	gi_ufont_set_format(font, GI_RENDER_a8);
 	//gi_ufont_set_size(font, 10);

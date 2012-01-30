@@ -1068,7 +1068,7 @@ gdk_window_set_cursor (GdkWindow *window,
         cursor_private = (GdkCursorPrivate*) newcursor;
   }
 
-#if 0 //dpp
+#if 0 //dpp fixme
   GrSetCursor_aux(GDK_DRAWABLE_XID(window),cursor_private->width,
               cursor_private->height,cursor_private->hot_x,
               cursor_private->hot_y, cursor_private->fg, cursor_private->bg,

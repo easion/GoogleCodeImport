@@ -156,7 +156,7 @@ gdk_cursor_new (GdkCursorType cursor_type)
 GdkCursor*
 gdk_cursor_new_from_pixmap (GdkPixmap *source, GdkPixmap *mask, GdkColor *fg, GdkColor *bg, gint x, gint y)
 {
-#if 0
+#if 0 //fixme dpp
   GdkCursorPrivate *private;
   GdkCursor *cursor;
   gi_window_id_t source_pixmap, mask_pixmap;

@@ -400,13 +400,18 @@ void qt_init(QApplicationPrivate *priv, int)
 		chdir(appDir.toUtf8());		
 	}
 
+	int font_size = 12;
+	char *fontsz = getenv("QT_GIX_FONT_SIZE");
 	char *dfont = getenv("QT_GIX_FONT");
+
+	if (fontsz)
+		font_size = atoi(fontsz);
+
 	if (dfont)
 	{
-	 //QFont f = QFont(QLatin1String("SimSun"), 12);
-	 QFont f = QFont(QLatin1String(dfont), 11);
+	 QFont f = QFont(QLatin1String(dfont), font_size);
 
-	QApplicationPrivate::setSystemFont(f);
+	 QApplicationPrivate::setSystemFont(f);
 	}
 
 }

@@ -199,7 +199,7 @@ bool QSystemTrayIconSys::process_event(gi_msg_t *m)
 			  w = (m->params[3] >> 16)& 0xffff;
 			  h = m->params[3] & 0xffff;
 			  shelfRect.setRect(x, y, w, h);
-			  qDebug("pfWinEvent G_NIN_ACTIVE=%d,%d,%d,%d",x, y,w,h);
+			  //qDebug("pfWinEvent G_NIN_ACTIVE=%d,%d,%d,%d",x, y,w,h);
 			}
 			break;
 
@@ -207,7 +207,7 @@ bool QSystemTrayIconSys::process_event(gi_msg_t *m)
 			  ignoreNextMouseRelease = true; // Since DBLCLICK Generates a second mouse 
                                                // release we must ignore it
               emit q->activated(QSystemTrayIcon::DoubleClick);
-			  qDebug("Tray pfWinEvent DoubleClick\n");
+			  //qDebug("Tray pfWinEvent DoubleClick\n");
 			  break;		  
 
 		  case G_NIN_MOUSE_UP:
@@ -285,7 +285,6 @@ bool QSystemTrayIconSys::pfWinEvent( gi_msg_t *m, long *result )
 
 void QSystemTrayIconPrivate::install_sys()
 {
-	fprintf(stderr, "Reimplemented: QSystemTrayIconPrivate::install_sys \n");
     Q_Q(QSystemTrayIcon);
     if (!sys) {
         sys = new QSystemTrayIconSys(q);		
@@ -341,13 +340,11 @@ void QSystemTrayIconPrivate::showMessage_sys(const QString &title,
 
 QRect QSystemTrayIconPrivate::geometry_sys() const
 {
-	fprintf(stderr, "Reimplemented: QSystemTrayIconPrivate::geometry_sys \n");
 	return sys->shelfRect;
 }
 
 void QSystemTrayIconPrivate::remove_sys()
 {
-	fprintf(stderr, "Reimplemented: QSystemTrayIconPrivate::remove_sys \n");
 	if(sys) {    
     	delete sys;
     	sys = NULL;
@@ -356,7 +353,6 @@ void QSystemTrayIconPrivate::remove_sys()
 
 void QSystemTrayIconPrivate::updateIcon_sys()
 {
-	fprintf(stderr, "Reimplemented:  QSystemTrayIconPrivate::updateIcon_sys\n");	
     if (sys) {
 	    sys->UpdateIcon();
     }
@@ -369,7 +365,6 @@ void QSystemTrayIconPrivate::updateMenu_sys()
 
 void QSystemTrayIconPrivate::updateToolTip_sys()
 {
-	fprintf(stderr, "Reimplemented:  QSystemTrayIconPrivate::updateToolTip_sys\n");
 	if (sys) {
 		sys->UpdateTooltip();
 	}

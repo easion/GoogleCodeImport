@@ -162,7 +162,7 @@ gi_window_id_t qt_XCreateSimpleWindow(const QWidget *,  gi_window_id_t parent,
 	id = gi_create_window( parent, x, y, w, h, 
                                  background, style);
 
-	//printf("qt_XCreateSimpleWindow id = %d\n",id);
+	//printf("qt XCreateSimpleWindow id = %d\n",id);
     return id;
 }
 
@@ -179,6 +179,14 @@ void QWidgetPrivate::create_sys(WId window, bool initializeWindow, bool destroyO
     if (type == Qt::ToolTip){
         flags |= Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint ;  
 		style |= (GI_FLAGS_TASKBAR_WINDOW);
+	}
+
+	if (flags & Qt::FramelessWindowHint) {
+		style |= (GI_FLAGS_NON_FRAME);
+	}
+
+	if (flags & Qt::WindowStaysOnBottomHint) {
+		style |= (GI_FLAGS_DESKTOP_WINDOW);
 	}
 
     bool topLevel = (flags & Qt::Window);
@@ -203,6 +211,11 @@ void QWidgetPrivate::create_sys(WId window, bool initializeWindow, bool destroyO
             if(ptl && (ptl->windowFlags() & Qt::WindowStaysOnTopHint))
                 flags |= Qt::WindowStaysOnTopHint;
         }
+
+		if (flags & Qt::WindowStaysOnTopHint)
+		{
+			style |= (GI_FLAGS_TASKBAR_WINDOW);
+		}
 
         if (type == Qt::SplashScreen) {
 			style |= (GI_FLAGS_NON_FRAME | GI_FLAGS_MENU_WINDOW) ;            
@@ -297,7 +310,7 @@ void QWidgetPrivate::create_sys(WId window, bool initializeWindow, bool destroyO
 							 style);       
 		if (!id)
 		{
-			printf("qt_XCreateSimpleWindow failed\n");
+			printf("qt CreateSimpleWindow failed\n");
 		} 
         setWinId(id);                                // set widget id/handle + hd
 	}
@@ -306,9 +319,12 @@ void QWidgetPrivate::create_sys(WId window, bool initializeWindow, bool destroyO
         ulong wsa_mask = 0;
         if (type != Qt::SplashScreen) { // && customize) {
 
-            bool customize = flags & Qt::CustomizeWindowHint;
-            if (!(flags & Qt::FramelessWindowHint) && !(customize && !(flags & Qt::WindowTitleHint))) {
-            }
+            //bool customize = flags & Qt::CustomizeWindowHint;
+            //if (flags & Qt::FramelessWindowHint) {
+			//	style |= (GI_FLAGS_NON_FRAME);
+			//}
+				//&& !(customize && !(flags & Qt::WindowTitleHint))) {
+            //}
         } else {
             // if type == Qt::SplashScreen
             //mwmhints.decorations = MWM_DECOR_ALL;

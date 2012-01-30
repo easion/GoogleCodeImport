@@ -1069,7 +1069,7 @@ int fl_handle(const gi_msg_t& thisevent)
       //Fl::e_state |= (FL_BUTTON1 << (xbutton-1));
 	  set_event_xy(xevent.body.message[3], xevent.params[2]);
       event = FL_PUSH;
-	  gi_set_focus_window(xevent.ev_window);
+	  //gi_set_focus_window(xevent.ev_window);
       checkdouble();
     }
 

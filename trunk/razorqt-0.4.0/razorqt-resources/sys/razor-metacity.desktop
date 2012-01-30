@@ -1,0 +1,14 @@
+[Desktop Entry]
+Encoding=UTF-8
+Type=Application
+Exec=razor-session -w metacity
+TryExec=metacity
+
+Name=Razor Desktop (metacity)
+Comment=Qt4 Desktop Environment
+
+Name[ru]=Рабочий стол Razor (metacity)
+Comment[ru]=Рабочий стол  на Qt
+
+Name[pl]=Pulpit Razor (metacity)
+Comment[pl]=Środowisko graficzne Qt4

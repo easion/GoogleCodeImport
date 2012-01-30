@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=RazorDesktop/Plugin
+Name=Hello World
+Comment=Display rich text on the screen
+
+Name[pl]=Witaj Świecie
+Comment[pl]=Wyświetla formatowany tekst na ekranie

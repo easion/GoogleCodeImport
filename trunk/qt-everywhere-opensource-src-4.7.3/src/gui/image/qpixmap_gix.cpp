@@ -103,17 +103,18 @@ QPixmap::toGixBitmap(unsigned code) const
 }
 
 QPixmap
-QPixmap::fromGixPixmap(gi_window_id_t pixmap)
+QPixmap::fromGixPixmap(gi_window_id_t src)
 {
-	gi_image_t *bmp = NULL;
+	gi_image_t *img = NULL;
 	gi_window_info_t wininfo;
 
-	gi_get_window_info(pixmap,&wininfo); //
+	gi_get_window_info(src,&wininfo); //
 	//img = gi_get_window_image(src, 0, 0, wininfo.width, wininfo.height,winfo.format,0,NULL);
-	img = gi_get_window_image(src, 0, 0, wininfo.width, wininfo.height,GI_RENDER_a8r8g8b8,0,NULL);
+	img = gi_get_window_image(src, 0, 0, wininfo.width, wininfo.height,
+		GI_RENDER_a8r8g8b8,0,NULL);
 	if (!img)
 	  return QPixmap();
-	return fromGixBitmap(bmp);
+	return fromGixBitmap(img);
 }
 
 QPixmap

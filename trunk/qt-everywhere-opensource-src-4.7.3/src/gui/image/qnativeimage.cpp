@@ -298,29 +298,59 @@ QNativeImage::QNativeImage(int width, int height, QImage::Format
 format,  bool /* isTextBuffer */, QWidget *)
     : image(width, height, format)
 {
+	gi_format_code_t gformat = GI_RENDER_UNKNOWN;
+
+	gformat = (gi_format_code_t)gi_screen_format();
+	if (gformat != GI_RENDER_r5g6b5)
+	{
+		gformat = GI_RENDER_x8r8g8b8;
+	}
+	else{
+		if (format != QImage::Format_RGB16) {
+		qDebug("QNativeImage::QNativeImage: Format_RGB16\n");
+		//gformat = GI_RENDER_r5g6b5;
+		}
+	}
 	//bitmap = new BBitmap(BRect(0,0,width-1,height-1), B_RGBA32, false,  true); // we use continuous for now
 	//uchar *bits = (uchar*)bitmap->Bits();
 
-	if (format == QImage::Format_RGB16) {
-		qDebug("QNativeImage::QNativeImage: Format_RGB16\n");
-	}
-	else{
-	}
+	//image.bits(), width, height, 8, image.bytesPerLine(),
+    //QCoreGraphicsPaintEngine::macDisplayColorSpace(widget), cgflags);
+    //CGContextTranslateCTM(cg, 0, height)
 
-	bitmap = gi_create_image_depth(width,height,GI_RENDER_x8r8g8b8);
+#if 0
+	bitmap = gi_create_image_depth(width,height,gformat);
+	Q_ASSERT(bitmap);
 	uchar *bits = (uchar*)bitmap->rgba;
+	Q_ASSERT(bits);
+#else
+	uchar *bits = (uchar*)malloc(height*image.bytesPerLine()*2);
+	//uchar *bits = image.bits();
+	bitmap = gi_create_image_with_param(width,height,gformat,
+		bits,image.bytesPerLine());
+#endif
 	image = QImage(bits, width, height, format);
+
 }
 
 
 QNativeImage::~QNativeImage()
 {
+	if (!bitmap)
+		return;
+
+	//bitmap->rgba = 0; //
 	gi_destroy_image( bitmap);
 	bitmap = 0;
 }
 
 QImage::Format QNativeImage::systemFormat()
 {
+#if 1
+	//if (QColormap::instance().depth() == 16)
+	if (gi_screen_format() == GI_RENDER_r5g6b5)
+        return QImage::Format_RGB16;
+#endif
     return QImage::Format_RGB32;
 }
 

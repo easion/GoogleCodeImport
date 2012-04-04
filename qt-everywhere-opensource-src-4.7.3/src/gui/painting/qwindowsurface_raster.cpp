@@ -157,21 +157,22 @@ enum{
 };
 extern "C" gi_screen_info_t* gi_default_screen_info(void);
 
-Q_GUI_EXPORT void qt_x11_drawImage(
+Q_GUI_EXPORT void qt_gix_drawImage(
 	const QRect &rect, const QPoint &pos, const QImage &image,
 	gi_window_id_t hd, gi_gc_ptr_t gc,  gi_screen_info_t *si)
 {
-    Q_ASSERT(image.format() == QImage::Format_RGB32);
-    Q_ASSERT(image.depth() == 32);
+    //Q_ASSERT(image.format() == QImage::Format_RGB32);
+    Q_ASSERT(image.depth() == 32 && image.depth() == 16);
 
     gi_image_t *xi;
     // Note: this code assumes either RGB or BGR, 8 bpc server layouts
-    const uint red_mask = (uint) si->redmask;
-    bool bgr_layout = (red_mask == 0xff);
 
     const int w = rect.width();
     const int h = rect.height();
 
+#if 0
+    const uint red_mask = (uint) si->redmask;
+    //bool bgr_layout = (red_mask == 0xff);
     QImage im;
     int image_byte_order = LSBFirst;// ImageByteOrder(X11->display);
     if ((QSysInfo::ByteOrder == QSysInfo::BigEndian && ((image_byte_order == LSBFirst) || bgr_layout))
@@ -218,7 +219,20 @@ Q_GUI_EXPORT void qt_x11_drawImage(
 			image.bytesPerLine());		
     }
     //XPutImage(dpy, hd, gc, xi, 0, 0, pos.x(), pos.y(), w, h);
+#else
+	gi_format_code_t gformat = GI_RENDER_UNKNOWN;
+	int bpp;
 
+	gformat= (gi_format_code_t)si->format;
+	if (gformat != GI_RENDER_r5g6b5)
+	{
+		gformat = GI_RENDER_x8r8g8b8;
+	}
+	bpp = (GI_RENDER_FORMAT_BPP(gformat) + 7 )>>3;
+	xi = gi_create_image_with_param(w, h,gformat,
+			(char *) image.scanLine(rect.y())+rect.x()*bpp,
+			image.bytesPerLine());		
+#endif
 	int rv;
 
 	rv = gi_gc_attch_window( gc, hd);
@@ -457,7 +471,7 @@ void QRasterWindowSurface::flush(QWidget *widget, const QRegion &rgn, const QPoi
 				qDebug("gc not createed\n");
 			}
 
-			qt_x11_drawImage(br, wbr.topLeft(), src, 
+			qt_gix_drawImage(br, wbr.topLeft(), src, 
 				widget->handle(), d_ptr->gc,gi_default_screen_info());
 
 			//gi_bitblt_image(d_ptr->gc, rect.x(), rect.y(),
@@ -474,24 +488,6 @@ void QRasterWindowSurface::flush(QWidget *widget, const QRegion &rgn, const QPoi
     if (wrgn.rectCount() != 1)
         gi_set_gc_clip_rectangles( d_ptr->gc, NULL,0);
 
-
-/*
-	// d->image is the image to be painted
-	// widget is the widget to be painted on
-	BView *view = widget->nativeView();
-	BLooper* looper = view->Looper();
-
-	if (looper->IsLocked())
-		return;
-	if(view->LockLooper()) {
-		QRect r = rgn.boundingRect();
-		gi_cliprect_t dst_region = gi_cliprect_t(r.x(), r.y(), r.x()+r.width(), r.y()+r.height());
-		gi_cliprect_t src_region = dst_region;
-		src_region.OffsetBy(offset.x(),offset.y());
-		view->DrawBitmap(d->image->bitmap, src_region, dst_region);
-		view->UnlockLooper();
-	}
-*/
 
 #endif
 

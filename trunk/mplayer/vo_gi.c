@@ -200,7 +200,7 @@ static int config (uint32_t width, uint32_t height, uint32_t d_width,
 	gc = gi_create_gc((window),NULL);
 
 	snprintf(titlebuf,sizeof(titlebuf),"MPlayer-1.0rc2 - %s", filename);	
-	gi_set_window_caption(window,titlebuf);
+	gi_set_window_utf8_caption(window,titlebuf);
 	gi_show_window(window);
 
 	gi_bitmap = gi_create_image_depth(image_width, image_height,si.format);

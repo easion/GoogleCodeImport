@@ -54,7 +54,7 @@ static int image_format;
 
 static vo_info_t info = {
 	"Netbas GI Windowing System",
-	"NetbasGI",
+	"gix",
 	"Easion <easion@gmail.com>",
 	""
 };

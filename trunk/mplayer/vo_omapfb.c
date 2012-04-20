@@ -311,7 +311,7 @@ static int x11_check_events()
 				}
 
         } else if (Event.type == GI_MSG_CLIENT_MSG) {
-            if(Event.client.client_type == GA_WM_PROTOCOLS
+            if(Event.body.client.client_type == GA_WM_PROTOCOLS
           &&Event.params[0] == GA_WM_DELETE_WINDOW) {
                 mplayer_put_key(KEY_ESC);
             }

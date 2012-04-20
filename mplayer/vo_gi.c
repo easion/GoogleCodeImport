@@ -277,8 +277,8 @@ static void check_events (void)
 	replay_event = gi_get_message (&event,MSG_NO_WAIT);
 	if (replay_event > 0)
 	{
-		x=event.x;
-		y=event.y;
+		x=event.body.rect.x;
+		y=event.body.rect.y;
 
 		switch (event.type)
 		{	
@@ -366,7 +366,7 @@ static void check_events (void)
 		}
 
 		case GI_MSG_CLIENT_MSG:
-		if(event.client.client_type == GA_WM_PROTOCOLS
+		if(event.body.client.client_type == GA_WM_PROTOCOLS
 		&&event.params[0] == GA_WM_DELETE_WINDOW){
 
 		mplayer_put_key(KEY_CLOSE_WIN);

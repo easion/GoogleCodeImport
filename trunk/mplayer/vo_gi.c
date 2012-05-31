@@ -23,7 +23,7 @@
 #include "input/mouse.h"
 #define GI_DOUBLEBUFFER
 
-static gi_window_id_t  window;
+static gi_window_id_t  window = 0;
 static gi_gc_id_t  gc;
 static gi_screen_info_t si;
 static	gi_image_t *gi_bitmap;
@@ -65,9 +65,7 @@ static int preinit(const char *arg)
 {
 	int err;
 
-	err = gi_init();
-
-	
+	err = gi_init();	
 
 	gi_get_screen_info(&si);
 	
@@ -133,6 +131,7 @@ static int config (uint32_t width, uint32_t height, uint32_t d_width,
 	int req_w = (int) width;
 	int req_h = (int) height;
 	int req_bpp;
+		int err;
 
 	if (!IMGFMT_IS_RGB(format) && !IMGFMT_IS_BGR(format)) {
 	assert(0);
@@ -174,10 +173,10 @@ static int config (uint32_t width, uint32_t height, uint32_t d_width,
 	image_scale_buf = (uint8_t *) malloc(image_width_full * image_height_full * (GI_RENDER_FORMAT_BPP(si.format)+7/8));
 	image_sws = sws_getContextFromCmdLine(image_width, image_height, image_format, image_width_full, image_height_full, image_format);
 
-	if (vo_config_count <= 0) {
+	//if (vo_config_count <= 0) {
 	char titlebuf[128];
 
-	uint32_t flags =	(GI_MASK_BUTTON_DOWN | GI_MASK_KEY_DOWN |
+	uint32_t wflags =	(GI_MASK_BUTTON_DOWN | GI_MASK_KEY_DOWN |
 	GI_MASK_CONFIGURENOTIFY | GI_MASK_KEY_UP|GI_MASK_MOUSE_MOVE| GI_MASK_BUTTON_UP|GI_MASK_CLIENT_MSG
 	| GI_MASK_EXPOSURE);
 
@@ -191,9 +190,27 @@ static int config (uint32_t width, uint32_t height, uint32_t d_width,
 	image_y = y;
 
 	if (WinID > 0){
+		gi_window_info_t winfo;
+		gi_window_id_t *child = 0;
+		gi_window_id_t parent;
+        unsigned int n_children;
+
 		window = WinID;
+
+		gi_query_tree( WinID,  &parent, &child, &n_children);
+        if (n_children)
+            free(child);
+
+		//window = parent;
+
+		err = gi_get_window_info(window, &winfo);
+		if (err < 0)
+		{
+			goto local_win;
+		}
 	}
 	else{
+local_win:
 		window = gi_create_window(GI_DESKTOP_WINDOW_ID, x,y,image_width, 
 			image_height,GI_RGB( 192, 192, 192 ),GI_FLAGS_TOPMOST_WINDOW);
 
@@ -203,11 +220,13 @@ static int config (uint32_t width, uint32_t height, uint32_t d_width,
 			return -1;
 		}
 
-		gi_set_events_mask(window,  flags);
+		
 
 		snprintf(titlebuf,sizeof(titlebuf),"MPlayer-1.0rc2 - %s", filename);	
 		gi_set_window_utf8_caption(window,titlebuf);
 	}
+
+	gi_set_events_mask(window,  wflags);
 	gc = gi_create_gc((window),NULL);
 	gi_show_window(window);
 
@@ -220,7 +239,7 @@ static int config (uint32_t width, uint32_t height, uint32_t d_width,
 		gi_exit();
 		return 1;
 	}
-	}
+	//}
 	return 0;
 }
 

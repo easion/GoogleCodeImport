@@ -67,6 +67,8 @@ static int preinit(const char *arg)
 
 	err = gi_init();
 
+	
+
 	gi_get_screen_info(&si);
 	
 	if (err<0) {
@@ -188,19 +190,25 @@ static int config (uint32_t width, uint32_t height, uint32_t d_width,
 	image_x = x;
 	image_y = y;
 
-	window = gi_create_window(GI_DESKTOP_WINDOW_ID, x,y,image_width, image_height,GI_RGB( 192, 192, 192 ),GI_FLAGS_TOPMOST_WINDOW);
-
-	if (window<0)
-	{
-	printf("Create  MPlayer window error\n");
-	return -1;
+	if (WinID > 0){
+		window = WinID;
 	}
+	else{
+		window = gi_create_window(GI_DESKTOP_WINDOW_ID, x,y,image_width, 
+			image_height,GI_RGB( 192, 192, 192 ),GI_FLAGS_TOPMOST_WINDOW);
 
-	gi_set_events_mask(window,  flags);
+		if (window<0)
+		{
+			printf("Create  MPlayer window error\n");
+			return -1;
+		}
+
+		gi_set_events_mask(window,  flags);
+
+		snprintf(titlebuf,sizeof(titlebuf),"MPlayer-1.0rc2 - %s", filename);	
+		gi_set_window_utf8_caption(window,titlebuf);
+	}
 	gc = gi_create_gc((window),NULL);
-
-	snprintf(titlebuf,sizeof(titlebuf),"MPlayer-1.0rc2 - %s", filename);	
-	gi_set_window_utf8_caption(window,titlebuf);
 	gi_show_window(window);
 
 	gi_bitmap = gi_create_image_depth(image_width, image_height,si.format);
@@ -209,13 +217,10 @@ static int config (uint32_t width, uint32_t height, uint32_t d_width,
 
 	if (!gi_bitmap)
 	{
-	gi_exit();
-	return 1;
+		gi_exit();
+		return 1;
 	}
-
-
 	}
-
 	return 0;
 }
 
